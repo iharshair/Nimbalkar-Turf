@@ -6,7 +6,9 @@ import { X } from 'lucide-react'
 import { useBooking } from '@/context/BookingContext'
 import { useRazorpay } from '@/hooks/useRazorpay'
 import { broadcastSlotsRefresh } from '@/hooks/useSlots'
+import { logAnalyticsEvent } from '@/lib/firebase/analytics'
 import { useSmoothScroll } from '@/components/motion/SmoothScrollProvider'
+import { useFocusTrap } from '@/hooks/useFocusTrap'
 import { useToast } from '@/components/ui/Toast'
 import { BookingEngine } from '@/components/booking/BookingEngine'
 import { DetailsForm } from '@/components/booking/DetailsForm'
@@ -33,6 +35,10 @@ export function BookingModal() {
   const panelRef = useRef<HTMLDivElement>(null)
   const [submitting, setSubmitting] = useState(false)
 
+  // Without this, Tab escapes into the inline BookingEngine behind the
+  // dialog — a second slot grid bound to the same selection state.
+  useFocusTrap(panelRef, isOpen)
+
   // Read through a ref inside the key handler so that toggling
   // `submitting` doesn't re-run the lock effect below — which would
   // release the scroll lock and yank focus back to the panel mid-payment.
@@ -58,6 +64,16 @@ export function BookingModal() {
 
   const handleSubmit = useCallback(
     async (details: BookingDetails) => {
+      // SelectionGuard can empty the selection while the customer is on
+      // the details step (someone else booked those hours). Without this,
+      // they'd submit a zero-slot order and see a generic "payment failed"
+      // instead of being told what actually happened.
+      if (!selected.length) {
+        warning('Your slots are no longer held', 'Pick your hours again to continue.')
+        setStep('slots')
+        return
+      }
+
       setSubmitting(true)
       info('Opening secure payment…', 'Your slots are held for the next 10 minutes.')
 
@@ -69,6 +85,12 @@ export function BookingModal() {
         setStep('success')
         // The hours are gone now — tell every mounted grid at once.
         broadcastSlotsRefresh()
+        // No PII: hours and amount only.
+        void logAnalyticsEvent('booking_completed', {
+          hours: result.booking.slotIds.length,
+          amount: result.booking.amount,
+          demo: Boolean(result.booking.demo),
+        })
         success(
           result.booking.demo ? 'Demo booking complete' : 'Payment received',
           `Reference ${result.booking.reference}.`,

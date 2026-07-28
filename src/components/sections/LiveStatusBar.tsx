@@ -76,7 +76,7 @@ export function LiveStatusBar() {
                   minute: '2-digit',
                   hour12: true,
                 })}{' '}
-                <span className="text-[0.5em] uppercase tracking-[0.2em] text-chalk/35">IST</span>
+                <span className="text-[0.5em] uppercase tracking-[0.2em] text-chalk/55">IST</span>
               </time>
             ) : (
               // Reserve the same width so nothing jumps on hydration.
@@ -99,7 +99,7 @@ export function LiveStatusBar() {
         {/* ── Popular times ──────────────────────────────────────── */}
         <div>
           <div className="mb-3 flex items-end justify-between gap-4">
-            <h2 className="font-display text-[0.72rem] uppercase tracking-[0.2em] text-chalk/40">
+            <h2 className="font-display text-[0.72rem] uppercase tracking-[0.2em] text-chalk/60">
               Popular times{' '}
               <span className="text-chalk/70">
                 · {status ? DAY_LABELS[status.day] : '—'}
@@ -156,7 +156,7 @@ export function LiveStatusBar() {
           </ol>
 
           {/* Sparse axis labels — every four hours keeps it readable. */}
-          <div className="mt-2 flex text-[0.6rem] uppercase tracking-[0.14em] text-chalk/30">
+          <div className="mt-2 flex text-[0.6rem] uppercase tracking-[0.14em] text-chalk/55">
             {curve.map((_, hour) => (
               <span key={hour} className="flex-1 text-center">
                 {hour % 4 === 0 ? formatHourShort(hour) : ''}
@@ -171,7 +171,7 @@ export function LiveStatusBar() {
 
 function Legend() {
   return (
-    <ul className="hidden items-center gap-3 text-[0.6rem] uppercase tracking-[0.14em] text-chalk/40 sm:flex">
+    <ul className="hidden items-center gap-3 text-[0.6rem] uppercase tracking-[0.14em] text-chalk/60 sm:flex">
       <li className="flex items-center gap-1.5">
         <span className="h-2 w-2 rounded-sm bg-turf-dark" aria-hidden />
         Steady

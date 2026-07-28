@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import Lenis from 'lenis'
+import { MotionConfig } from 'framer-motion'
 import { ScrollTrigger, gsap } from '@/lib/gsap'
 import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion'
 
@@ -72,6 +73,22 @@ export function SmoothScrollProvider({ children }: { children: React.ReactNode }
     ScrollTrigger.refresh()
     setReady(true)
 
+    /*
+      next/font uses `display: swap`, so the real faces land after first
+      paint and reflow the page. Every ScrollTrigger start/end measured
+      before that is then wrong — reveals fire at the wrong scroll position
+      and the pinned gallery mis-measures its rail. document.fonts.ready
+      is the precise signal for "layout has settled".
+    */
+    let fontsSettled = false
+    const refreshAfterFonts = () => {
+      if (fontsSettled) return
+      fontsSettled = true
+      ScrollTrigger.refresh()
+    }
+    if (document.fonts?.status === 'loaded') refreshAfterFonts()
+    else void document.fonts?.ready.then(refreshAfterFonts)
+
     return () => {
       lenis.off('scroll', ScrollTrigger.update)
       gsap.ticker.remove(raf)
@@ -115,7 +132,14 @@ export function SmoothScrollProvider({ children }: { children: React.ReactNode }
 
   return (
     <SmoothScrollContext.Provider value={{ scrollTo, stop, start }}>
-      {children}
+      {/*
+        Framer Motion does not read prefers-reduced-motion by itself, and
+        the CSS @media override in globals.css cannot touch JS-driven
+        transforms. Without this, the modal, lightbox, toasts, mobile menu
+        and FAB all kept animating for users who asked them not to.
+        `reducedMotion="user"` keeps opacity fades and drops movement.
+      */}
+      <MotionConfig reducedMotion="user">{children}</MotionConfig>
     </SmoothScrollContext.Provider>
   )
 }

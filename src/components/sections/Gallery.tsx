@@ -196,7 +196,7 @@ function HorizontalRail({
         </div>
       </div>
 
-      <p className="pointer-events-none absolute bottom-7 left-0 right-0 text-center font-display text-[0.6rem] uppercase tracking-[0.22em] text-chalk/25">
+      <p className="pointer-events-none absolute bottom-7 left-0 right-0 text-center font-display text-[0.6rem] uppercase tracking-[0.22em] text-chalk/55">
         Keep scrolling to pan →
       </p>
     </div>

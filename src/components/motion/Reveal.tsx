@@ -1,6 +1,6 @@
 'use client'
 
-import { type ElementType, type ReactNode, useRef } from 'react'
+import { Children, isValidElement, type ElementType, type ReactNode, useRef } from 'react'
 import { EASE, gsap } from '@/lib/gsap'
 import { useIsomorphicLayoutEffect } from '@/hooks/useIsomorphicLayoutEffect'
 import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion'
@@ -48,6 +48,22 @@ export function Reveal({
   const ref = useRef<HTMLElement>(null)
   const reducedMotion = usePrefersReducedMotion()
 
+  /**
+   * A stable fingerprint of the children's keys.
+   *
+   * `children` itself is a new object every render, so depending on it
+   * would rebuild the timeline constantly. But the effect MUST re-run when
+   * the set of children actually changes: the reveal is `once: true` and
+   * the hidden starting state lives in CSS, so freshly mounted nodes that
+   * GSAP never sees stay invisible forever. That's what happened when the
+   * gallery filter swapped the grid's contents.
+   */
+  const childKeys = group
+    ? Children.toArray(children)
+        .map((c) => (isValidElement(c) ? String(c.key) : ''))
+        .join('|')
+    : ''
+
   useIsomorphicLayoutEffect(() => {
     const el = ref.current
     if (!el) return
@@ -80,7 +96,7 @@ export function Reveal({
     }, el)
 
     return () => ctx.revert()
-  }, [group, y, x, delay, duration, stagger, start, reducedMotion])
+  }, [group, childKeys, y, x, delay, duration, stagger, start, reducedMotion])
 
   // Polymorphic `as` + a forwarded ref is more than TS's ElementType
   // union can narrow, and the cast is contained to this one line.

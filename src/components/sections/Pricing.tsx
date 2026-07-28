@@ -45,19 +45,19 @@ export function Pricing() {
                 <tr className="border-b border-chalk/10 bg-chalk/[0.02]">
                   <th
                     scope="col"
-                    className="px-5 py-4 font-display text-[0.62rem] uppercase tracking-[0.18em] text-chalk/40 sm:px-6"
+                    className="px-5 py-4 font-display text-[0.62rem] uppercase tracking-[0.18em] text-chalk/60 sm:px-6"
                   >
                     Slot
                   </th>
                   <th
                     scope="col"
-                    className="px-3 py-4 text-right font-display text-[0.62rem] uppercase tracking-[0.18em] text-chalk/40"
+                    className="px-3 py-4 text-right font-display text-[0.62rem] uppercase tracking-[0.18em] text-chalk/60"
                   >
                     Mon–Fri
                   </th>
                   <th
                     scope="col"
-                    className="px-5 py-4 text-right font-display text-[0.62rem] uppercase tracking-[0.18em] text-chalk/40 sm:px-6"
+                    className="px-5 py-4 text-right font-display text-[0.62rem] uppercase tracking-[0.18em] text-chalk/60 sm:px-6"
                   >
                     Sat–Sun
                   </th>
@@ -76,7 +76,7 @@ export function Pricing() {
                       <span className="mt-1 block text-[0.72rem] uppercase tracking-[0.12em] text-neon/70">
                         {formatHour(tier.from)} – {formatHour(tier.to === 24 ? 0 : tier.to)}
                       </span>
-                      <span className="mt-2 block max-w-xs text-[0.8rem] font-normal leading-relaxed text-chalk/45">
+                      <span className="mt-2 block max-w-xs text-[0.8rem] font-normal leading-relaxed text-chalk/60">
                         {tier.note}
                       </span>
                     </th>
@@ -147,13 +147,13 @@ export function Pricing() {
                     <tr className="bg-chalk/[0.04]">
                       <th
                         scope="col"
-                        className="px-4 py-2.5 font-display text-[0.6rem] uppercase tracking-[0.16em] text-chalk/40"
+                        className="px-4 py-2.5 font-display text-[0.6rem] uppercase tracking-[0.16em] text-chalk/60"
                       >
                         Minutes over
                       </th>
                       <th
                         scope="col"
-                        className="px-4 py-2.5 text-right font-display text-[0.6rem] uppercase tracking-[0.16em] text-chalk/40"
+                        className="px-4 py-2.5 text-right font-display text-[0.6rem] uppercase tracking-[0.16em] text-chalk/60"
                       >
                         You pay
                       </th>

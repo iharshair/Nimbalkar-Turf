@@ -1,10 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import type { GalleryItem } from '@/types'
 import { useSmoothScroll } from '@/components/motion/SmoothScrollProvider'
+import { useFocusTrap } from '@/hooks/useFocusTrap'
 import { cn } from '@/lib/utils'
 
 interface LightboxProps {
@@ -22,7 +23,17 @@ export function Lightbox({ items, index, onClose, onNavigate }: LightboxProps) {
   const open = index !== null && index >= 0 && index < items.length
   const item = open ? items[index!] : null
   const closeRef = useRef<HTMLButtonElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
   const { stop, start } = useSmoothScroll()
+  /** Set when a video file is missing or undecodable. Reset per item. */
+  const [videoFailed, setVideoFailed] = useState(false)
+
+  useFocusTrap(dialogRef, open)
+
+  // A fresh item deserves a fresh attempt at loading.
+  useEffect(() => {
+    setVideoFailed(false)
+  }, [index])
 
   const next = useCallback(() => {
     if (index === null) return
@@ -62,6 +73,7 @@ export function Lightbox({ items, index, onClose, onNavigate }: LightboxProps) {
     <AnimatePresence>
       {open && item ? (
         <motion.div
+          ref={dialogRef}
           role="dialog"
           aria-modal="true"
           aria-label={item.caption}
@@ -106,7 +118,7 @@ export function Lightbox({ items, index, onClose, onNavigate }: LightboxProps) {
             data-cursor="drag"
           >
             <div className="overflow-hidden rounded-card border border-chalk/10 bg-night-800">
-              {item.type === 'video' ? (
+              {item.type === 'video' && !videoFailed ? (
                 <video
                   src={item.src}
                   poster={item.poster}
@@ -114,11 +126,15 @@ export function Lightbox({ items, index, onClose, onNavigate }: LightboxProps) {
                   autoPlay
                   playsInline
                   className="max-h-[74vh] w-full bg-night object-contain"
+                  // The video files aren't in the repo — see
+                  // public/media/video/README.md. Fall back to the poster
+                  // instead of leaving a dead player on screen.
+                  onError={() => setVideoFailed(true)}
                 />
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={item.src}
+                  src={item.type === 'video' ? (item.poster ?? item.src) : item.src}
                   alt={item.alt}
                   className="max-h-[74vh] w-full bg-night object-contain"
                   draggable={false}
@@ -128,7 +144,7 @@ export function Lightbox({ items, index, onClose, onNavigate }: LightboxProps) {
 
             <figcaption className="flex items-center justify-between gap-4 text-sm">
               <span className="text-chalk/80">{item.caption}</span>
-              <span className="shrink-0 font-display text-xs uppercase tracking-[0.16em] text-chalk/40">
+              <span className="shrink-0 font-display text-xs uppercase tracking-[0.16em] text-chalk/60">
                 {index! + 1} / {items.length}
               </span>
             </figcaption>

@@ -18,6 +18,7 @@ import {
   issueReleaseToken,
 } from '@/lib/razorpay'
 import { isPastSlot } from '@/lib/slots'
+import { clientKey, rateLimit, tooManyRequests } from '@/lib/rateLimit'
 import { describeSlotRanges } from '@/lib/utils'
 
 /**
@@ -44,7 +45,25 @@ export const runtime = 'nodejs'
  * Without Razorpay or Firebase credentials it returns `demo: true` and the
  * client simulates a settled payment, so the flow stays reviewable.
  */
+/**
+ * Each order places a 10-minute hold on real slots, so this endpoint is
+ * the one worth abusing: a loop could hold the whole calendar. Six per
+ * minute is far above any legitimate use (a customer makes one) and far
+ * below what it takes to deny the business its bookings.
+ */
+const ORDER_LIMIT = 6
+const ORDER_WINDOW_MS = 60_000
+
 export async function POST(request: Request) {
+  const limit = rateLimit(clientKey(request, 'order'), ORDER_LIMIT, ORDER_WINDOW_MS)
+  if (!limit.ok) {
+    console.warn('[order] rate limited', { key: clientKey(request, 'order') })
+    return tooManyRequests(
+      limit.retryAfter,
+      'Too many booking attempts. Please wait a moment and try again.',
+    )
+  }
+
   let payload: unknown
   try {
     payload = await request.json()
@@ -88,7 +107,6 @@ export async function POST(request: Request) {
     )
   }
 
-  // ── Demo mode: nothing to persist, nothing to charge. ───────────────
   // Never take money into storage that can't be trusted to keep it.
   const storageProblem = storageUnavailableReason()
   if (storageProblem) {

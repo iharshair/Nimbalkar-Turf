@@ -57,7 +57,7 @@ export function Reviews() {
                   <li key={star} className="flex items-center gap-3 text-[0.78rem]">
                     <span className="flex w-8 shrink-0 items-center gap-1 text-chalk/50">
                       {star}
-                      <Star className="h-3 w-3 fill-chalk/40 text-chalk/40" aria-hidden />
+                      <Star className="h-3 w-3 fill-chalk/40 text-chalk/60" aria-hidden />
                     </span>
                     <span
                       className="h-1.5 flex-1 overflow-hidden rounded-full bg-chalk/[0.07]"
@@ -72,7 +72,7 @@ export function Reviews() {
                         style={{ width: `${pct}%` }}
                       />
                     </span>
-                    <span className="w-8 shrink-0 text-right tabular-nums text-chalk/40">
+                    <span className="w-8 shrink-0 text-right tabular-nums text-chalk/60">
                       {count}
                     </span>
                   </li>
@@ -142,7 +142,7 @@ export function Reviews() {
                         <span className="block truncate font-display text-[0.78rem] uppercase tracking-[0.08em] text-chalk">
                           {review.author}
                         </span>
-                        <span className="block text-[0.72rem] text-chalk/40">
+                        <span className="block text-[0.72rem] text-chalk/60">
                           {review.when}
                           {review.sport ? ` · ${review.sport}` : ''}
                         </span>

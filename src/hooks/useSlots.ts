@@ -28,7 +28,7 @@ const POLL_MS = 20_000
  * own, but the polling path would otherwise wait up to POLL_MS to notice
  * the slot the customer just paid for.
  */
-export const SLOTS_REFRESH_EVENT = 'nsc:slots-refresh'
+const SLOTS_REFRESH_EVENT = 'nsc:slots-refresh'
 
 export function broadcastSlotsRefresh() {
   if (typeof window !== 'undefined') window.dispatchEvent(new Event(SLOTS_REFRESH_EVENT))
@@ -90,10 +90,18 @@ export function useSlots(dateISO: string): UseSlotsResult {
   const [error, setError] = useState<string | null>(null)
   const [source, setSource] = useState<SlotSource>('polled')
   const [backend, setBackend] = useState<StoreBackend>('unknown')
-  /** Bumped to re-probe, and to recompute which hours have passed. */
-  const [tick, setTick] = useState(0)
+  /**
+   * Two counters on purpose. `refreshToken` triggers a network re-read;
+   * `clockTick` only re-evaluates which hours have already passed.
+   *
+   * They used to be one, so the 60-second clock forced a fetch of
+   * /api/slots/[date] every minute — for every mounted instance of this
+   * hook, including on the Firestore push path where polling is pointless.
+   */
+  const [refreshToken, setRefreshToken] = useState(0)
+  const [clockTick, setClockTick] = useState(0)
 
-  const refresh = useCallback(() => setTick((t) => t + 1), [])
+  const refresh = useCallback(() => setRefreshToken((t) => t + 1), [])
 
   /* ── Probe: read once, and learn the authoritative store ────────── */
   useEffect(() => {
@@ -129,7 +137,7 @@ export function useSlots(dateISO: string): UseSlotsResult {
     }
     // `stored` is written by this effect, so it must not be a dependency.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dateISO, tick])
+  }, [dateISO, refreshToken])
 
   /* ── Firestore push, once the server confirms it's authoritative ── */
   useEffect(() => {
@@ -186,17 +194,18 @@ export function useSlots(dateISO: string): UseSlotsResult {
     return () => window.removeEventListener(SLOTS_REFRESH_EVENT, refresh)
   }, [refresh])
 
-  // Keep `past` honest without re-rendering every second.
+  // Keep `past` honest without re-rendering every second, and without
+  // dragging the network along with it.
   useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 60_000)
+    const id = setInterval(() => setClockTick((t) => t + 1), 60_000)
     return () => clearInterval(id)
   }, [])
 
   const slots = useMemo(
     () => buildSlotGrid(dateISO, stored, new Date()),
-    // `tick` re-evaluates which hours have passed without changing inputs.
+    // `clockTick` re-evaluates which hours have passed; it changes no input.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [dateISO, stored, tick],
+    [dateISO, stored, clockTick],
   )
 
   return { slots, loading, error, source, backend, refresh }

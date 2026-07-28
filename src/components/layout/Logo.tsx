@@ -35,7 +35,7 @@ export function Logo({
           Nimbalkar <span className="text-neon">Sports Club</span>
         </span>
         {!compact ? (
-          <span className="mt-1 font-deva text-[0.62rem] tracking-wide text-chalk/45">
+          <span className="mt-1 font-deva text-[0.62rem] tracking-wide text-chalk/60">
             {BUSINESS.nameMr}
           </span>
         ) : null}

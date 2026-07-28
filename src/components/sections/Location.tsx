@@ -37,7 +37,7 @@ export function Location() {
           <Reveal group className="flex flex-col gap-4" y={26} stagger={0.08}>
             <div className="card p-6">
               <MapPin className="mb-4 h-5 w-5 text-neon" aria-hidden />
-              <h3 className="font-display text-[0.68rem] uppercase tracking-[0.2em] text-chalk/40">
+              <h3 className="font-display text-[0.68rem] uppercase tracking-[0.2em] text-chalk/60">
                 Address
               </h3>
               <address className="mt-2 not-italic leading-relaxed text-chalk/75">
@@ -60,7 +60,7 @@ export function Location() {
 
             <div className="card p-6">
               <Clock className="mb-4 h-5 w-5 text-neon" aria-hidden />
-              <h3 className="font-display text-[0.68rem] uppercase tracking-[0.2em] text-chalk/40">
+              <h3 className="font-display text-[0.68rem] uppercase tracking-[0.2em] text-chalk/60">
                 Hours
               </h3>
               <p className="mt-2 font-display text-display-sm text-chalk">24 Hours</p>
@@ -71,7 +71,7 @@ export function Location() {
 
             <div className="card p-6">
               <Phone className="mb-4 h-5 w-5 text-neon" aria-hidden />
-              <h3 className="font-display text-[0.68rem] uppercase tracking-[0.2em] text-chalk/40">
+              <h3 className="font-display text-[0.68rem] uppercase tracking-[0.2em] text-chalk/60">
                 Phone
               </h3>
               {/* tel: link — taps straight into the dialler on mobile. */}

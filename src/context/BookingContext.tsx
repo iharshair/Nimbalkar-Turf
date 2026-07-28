@@ -53,9 +53,13 @@ interface BookingContextValue {
   confirmed: ConfirmedBooking | null
   setConfirmed: (booking: ConfirmedBooking | null) => void
 
-  /** Retained between steps so a payment retry doesn't retype the form. */
-  details: BookingDetails | null
-  setDetails: (details: BookingDetails | null) => void
+  /**
+   * Retained between steps so a payment retry doesn't mean retyping the
+   * form. Partial by design — `policyAccepted` is never carried over, so
+   * the customer re-affirms the overtime policy on every attempt.
+   */
+  details: Partial<BookingDetails> | null
+  setDetails: (details: Partial<BookingDetails> | null) => void
 }
 
 const BookingContext = createContext<BookingContextValue | null>(null)
@@ -82,7 +86,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
   const [step, setStep] = useState<BookingStep>('slots')
   const [confirmed, setConfirmed] = useState<ConfirmedBooking | null>(null)
-  const [details, setDetails] = useState<BookingDetails | null>(null)
+  const [details, setDetails] = useState<Partial<BookingDetails> | null>(null)
 
   // Slot ids are only meaningful for one date.
   const setDate = useCallback((next: string) => {
@@ -137,11 +141,28 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
     setStep('slots')
   }, [])
 
-  // Roll the default date forward if the tab is left open past midnight.
+  /**
+   * Roll the date forward if the tab is left open past midnight.
+   *
+   * This previously called setDateState directly, bypassing setDate — so
+   * the date advanced while the selection was kept. A customer sitting on
+   * the details step at 00:00 would then be priced, held and charged for
+   * the *following* day's hours. The selection has to go with the date,
+   * and an open checkout has to return to the slot step.
+   */
+  const dateRef = useRef(date)
+  dateRef.current = date
+
   useEffect(() => {
     const id = setInterval(() => {
       const today = clubToday()
-      setDateState((current) => (current < today ? today : current))
+      if (dateRef.current >= today) return
+
+      setDateState(today)
+      setSelected([])
+      setDetails(null)
+      // Leave a finished booking alone; its confirmation is still valid.
+      setStep((current) => (current === 'success' ? current : 'slots'))
     }, 60_000)
     return () => clearInterval(id)
   }, [])

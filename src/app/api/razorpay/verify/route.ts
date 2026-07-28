@@ -73,6 +73,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Payment does not match this booking' }, { status: 409 })
   }
 
+  // Captured before confirming: if the webhook got here first it already
+  // sent the receipts, and firing them again means the customer gets two
+  // emails and two texts for one booking.
+  const alreadyConfirmed = existing.status === 'confirmed'
+
   try {
     const booking = await confirmBooking({
       bookingId,
@@ -80,18 +85,27 @@ export async function POST(request: Request) {
       orderId: razorpay_order_id,
     })
 
-    // Receipts are best-effort and must not delay the response — the
-    // customer is staring at a spinner while this runs.
-    void sendReceipts({
-      reference: bookingReference(bookingId),
-      name: booking.name,
-      phone: booking.phone,
-      email: booking.email,
-      date: booking.date,
-      slotIds: booking.slotIds,
-      amount: booking.amount,
-      paymentId: razorpay_payment_id,
-    })
+    if (!alreadyConfirmed) {
+      /*
+        Awaited, not fire-and-forget. A serverless runtime freezes the
+        instance as soon as the response is returned, so a dangling
+        promise here would have its HTTP calls cancelled mid-flight and
+        the receipt would silently never arrive. sendReceipts swallows its
+        own failures, so awaiting cannot fail the booking — it only costs
+        a few hundred milliseconds on a screen the customer has already
+        finished interacting with.
+      */
+      await sendReceipts({
+        reference: bookingReference(bookingId),
+        name: booking.name,
+        phone: booking.phone,
+        email: booking.email,
+        date: booking.date,
+        slotIds: booking.slotIds,
+        amount: booking.amount,
+        paymentId: razorpay_payment_id,
+      })
+    }
 
     return NextResponse.json({
       ok: true,

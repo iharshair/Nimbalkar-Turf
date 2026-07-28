@@ -175,11 +175,11 @@ export function Confirmation({
         </p>
 
         <dl className="mx-auto mt-6 grid max-w-sm gap-y-2.5 rounded-xl border border-chalk/12 bg-chalk/[0.02] p-4 text-left text-[0.84rem] sm:grid-cols-[auto_1fr] sm:gap-x-6">
-          <dt className="text-chalk/40">Date</dt>
+          <dt className="text-chalk/60">Date</dt>
           <dd className="text-chalk/85 sm:text-right">{longDate}</dd>
-          <dt className="text-chalk/40">Time</dt>
+          <dt className="text-chalk/60">Time</dt>
           <dd className="text-chalk/85 sm:text-right">{ranges.join(', ')}</dd>
-          <dt className="text-chalk/40">Paid</dt>
+          <dt className="text-chalk/60">Paid</dt>
           <dd className="font-display text-neon sm:text-right">{formatINR(booking.amount)}</dd>
         </dl>
 
@@ -231,13 +231,13 @@ export function Confirmation({
           <button
             type="button"
             onClick={onDone}
-            className="w-full pt-1 text-[0.78rem] text-chalk/40 underline underline-offset-4 transition-colors hover:text-chalk"
+            className="w-full pt-1 text-[0.78rem] text-chalk/60 underline underline-offset-4 transition-colors hover:text-chalk"
           >
             Done
           </button>
         </div>
 
-        <p className="mt-5 flex items-center justify-center gap-2 text-[0.72rem] text-chalk/35">
+        <p className="mt-5 flex items-center justify-center gap-2 text-[0.72rem] text-chalk/55">
           <Phone className="h-3 w-3" aria-hidden />
           Need to change something? Call {BUSINESS.phone}
         </p>

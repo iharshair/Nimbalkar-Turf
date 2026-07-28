@@ -17,7 +17,7 @@ const forceDemo = process.env.NEXT_PUBLIC_FORCE_DEMO_MODE === 'true'
 
 export type PaymentMode = 'simulated' | 'test' | 'live'
 
-export const paymentMode: PaymentMode = forceDemo
+const paymentMode: PaymentMode = forceDemo
   ? 'simulated'
   : razorpayKeyId.startsWith('rzp_live_')
     ? 'live'

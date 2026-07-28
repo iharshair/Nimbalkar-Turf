@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowLeft, Check, Loader2, Lock, ShieldCheck } from 'lucide-react'
@@ -34,6 +34,14 @@ interface DetailsFormProps {
 export function DetailsForm({ onBack, onSubmit, submitting }: DetailsFormProps) {
   const { date, selected, total, details, setDetails } = useBooking()
   const [shakeKey, setShakeKey] = useState(0)
+  /**
+   * Guards against double-submit. `submitting` arrives as a prop only
+   * after the parent's async work starts, and zodResolver validation is
+   * itself async — so two quick activations could both reach onSubmit and
+   * POST /order twice. The second order then collides with the first
+   * one's own hold and 409s, bouncing the customer out of checkout.
+   */
+  const inFlight = useRef(false)
 
   const {
     register,
@@ -56,9 +64,14 @@ export function DetailsForm({ onBack, onSubmit, submitting }: DetailsFormProps) 
   })
 
   // Preserve what was typed if the modal closes or a payment fails, so a
-  // retry doesn't mean filling the form out twice.
+  // retry doesn't mean filling the form out twice — but deliberately drop
+  // `policyAccepted`. Restoring it pre-ticked would defeat the point of
+  // making the customer acknowledge the overtime rule.
   useEffect(() => {
-    return () => setDetails(getValues())
+    return () => {
+      const { policyAccepted: _reaffirmEachTime, ...draft } = getValues()
+      setDetails(draft)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -81,8 +94,14 @@ export function DetailsForm({ onBack, onSubmit, submitting }: DetailsFormProps) 
       noValidate
       onSubmit={handleSubmit(
         async (data) => {
-          setDetails(data)
-          await onSubmit(data)
+          if (inFlight.current) return
+          inFlight.current = true
+          try {
+            setDetails(data)
+            await onSubmit(data)
+          } finally {
+            inFlight.current = false
+          }
         },
         // Invalid submit: shake the whole form once.
         () => setShakeKey((k) => k + 1),
@@ -92,11 +111,11 @@ export function DetailsForm({ onBack, onSubmit, submitting }: DetailsFormProps) 
       {/* Order summary — never let anyone pay without seeing this again. */}
       <div className="rounded-xl border border-chalk/12 bg-chalk/[0.02] p-4">
         <dl className="grid gap-y-2 text-[0.82rem] sm:grid-cols-[auto_1fr] sm:gap-x-6">
-          <dt className="text-chalk/40">Date</dt>
+          <dt className="text-chalk/60">Date</dt>
           <dd className="text-chalk/85 sm:text-right">{longDate}</dd>
-          <dt className="text-chalk/40">Time</dt>
+          <dt className="text-chalk/60">Time</dt>
           <dd className="text-chalk/85 sm:text-right">{ranges}</dd>
-          <dt className="text-chalk/40">Payable now</dt>
+          <dt className="text-chalk/60">Payable now</dt>
           <dd className="font-display text-base text-neon sm:text-right">{formatINR(total)}</dd>
         </dl>
       </div>
@@ -129,7 +148,7 @@ export function DetailsForm({ onBack, onSubmit, submitting }: DetailsFormProps) 
             required
           >
             <div className="relative">
-              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[0.85rem] text-chalk/40">
+              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[0.85rem] text-chalk/60">
                 +91
               </span>
               <input
@@ -160,7 +179,7 @@ export function DetailsForm({ onBack, onSubmit, submitting }: DetailsFormProps) 
         </div>
 
         <fieldset>
-          <legend className="mb-2 font-display text-[0.66rem] uppercase tracking-[0.16em] text-chalk/45">
+          <legend className="mb-2 font-display text-[0.66rem] uppercase tracking-[0.16em] text-chalk/60">
             What are you playing?
           </legend>
           <div className="flex flex-wrap gap-2">
@@ -252,7 +271,7 @@ export function DetailsForm({ onBack, onSubmit, submitting }: DetailsFormProps) 
         </button>
       </div>
 
-      <p className="flex items-center justify-center gap-2 text-center text-[0.72rem] text-chalk/35">
+      <p className="flex items-center justify-center gap-2 text-center text-[0.72rem] text-chalk/55">
         <ShieldCheck className="h-3.5 w-3.5 text-neon/60" aria-hidden />
         Secured by Razorpay · UPI, cards and netbanking · Questions? {BUSINESS.phone}
       </p>
@@ -265,7 +284,7 @@ export function DetailsForm({ onBack, onSubmit, submitting }: DetailsFormProps) 
 function inputClass(state: 'idle' | 'valid' | 'error') {
   return cn(
     'h-12 w-full rounded-xl border bg-night-700/60 px-4 text-[0.9rem] text-chalk',
-    'placeholder:text-chalk/25 outline-none transition-[border-color,box-shadow] duration-300',
+    'placeholder:text-chalk/30 outline-none transition-[border-color,box-shadow] duration-300',
     state === 'error'
       ? 'field-error'
       : state === 'valid'
@@ -292,14 +311,14 @@ function Field({
   return (
     <label className="block">
       <span className="mb-2 flex items-center justify-between gap-3">
-        <span className="font-display text-[0.66rem] uppercase tracking-[0.16em] text-chalk/45">
+        <span className="font-display text-[0.66rem] uppercase tracking-[0.16em] text-chalk/60">
           {label}
           {required ? <span className="ml-1 text-neon">*</span> : null}
         </span>
         {state === 'valid' ? (
           <Check className="h-3.5 w-3.5 text-neon" aria-hidden />
         ) : hint && !error ? (
-          <span className="text-[0.66rem] text-chalk/30">{hint}</span>
+          <span className="text-[0.66rem] text-chalk/55">{hint}</span>
         ) : null}
       </span>
 

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { gsap } from '@/lib/gsap'
 import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion'
-import { useIsTouch } from '@/hooks/useMediaQuery'
+import { useIsDesktop } from '@/hooks/useMediaQuery'
 import { cn } from '@/lib/utils'
 
 /**
@@ -47,8 +47,21 @@ export function CustomCursor() {
   const [visible, setVisible] = useState(false)
 
   const reducedMotion = usePrefersReducedMotion()
-  const isTouch = useIsTouch()
-  const enabled = !reducedMotion && !isTouch
+  /**
+   * Gate on the same query the markup uses (`lg` + fine pointer). The old
+   * check was `!isTouch`, which is true for a 800px-wide laptop — so
+   * `cursor: none` was applied while the replacement cursor stayed
+   * `hidden lg:block`, leaving no visible cursor at all between 768px and
+   * 1023px.
+   */
+  const isDesktop = useIsDesktop()
+  const enabled = !reducedMotion && isDesktop
+
+  // Render nothing until mounted. The server can't know the pointer type
+  // or motion preference, so committing markup on the first pass and then
+  // removing it is a guaranteed hydration mismatch.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
   // Toggle the class that hides the native cursor. Kept off the initial
   // SSR markup so a touch user never loses their cursor mid-hydration.
@@ -154,7 +167,7 @@ export function CustomCursor() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled])
 
-  if (!enabled) return null
+  if (!mounted || !enabled) return null
 
   const size =
     variant === 'labelled' ? 74 : variant === 'interactive' ? 52 : variant === 'hidden' ? 0 : 26

@@ -28,7 +28,7 @@ function longDate(dateISO: string): string {
   })
 }
 
-export function receiptText(p: ReceiptPayload): string {
+function receiptText(p: ReceiptPayload): string {
   return [
     `Booking confirmed — ${BUSINESS.name}`,
     ``,
@@ -97,7 +97,7 @@ function receiptHtml(p: ReceiptPayload): string {
 }
 
 /** Emails a receipt via Resend. Resolves false when not configured. */
-export async function sendEmailReceipt(p: ReceiptPayload): Promise<boolean> {
+async function sendEmailReceipt(p: ReceiptPayload): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY
   const from = process.env.RECEIPT_FROM_EMAIL
   if (!apiKey || !from || !p.email) {
@@ -136,7 +136,7 @@ export async function sendEmailReceipt(p: ReceiptPayload): Promise<boolean> {
  * Sends an SMS receipt via MSG91. Any transactional provider works —
  * swap the fetch below and keep the signature.
  */
-export async function sendSmsReceipt(p: ReceiptPayload): Promise<boolean> {
+async function sendSmsReceipt(p: ReceiptPayload): Promise<boolean> {
   const authKey = process.env.MSG91_AUTH_KEY
   const templateId = process.env.MSG91_TEMPLATE_ID
   if (!authKey || !templateId) {

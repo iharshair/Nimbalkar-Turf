@@ -55,7 +55,7 @@ export function About() {
               <blockquote className="text-[0.95rem] leading-relaxed text-chalk/80">
                 {quote.text}
               </blockquote>
-              <figcaption className="mt-auto font-display text-[0.62rem] uppercase tracking-[0.2em] text-chalk/35">
+              <figcaption className="mt-auto font-display text-[0.62rem] uppercase tracking-[0.2em] text-chalk/55">
                 {quote.label}
               </figcaption>
             </figure>

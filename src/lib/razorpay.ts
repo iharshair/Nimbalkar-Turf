@@ -12,12 +12,10 @@ const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET
 
 export const isRazorpayConfigured = Boolean(keyId && keySecret)
 export const RAZORPAY_KEY_ID = keyId ?? null
-/** True for rzp_test_* keys — used to label the UI honestly. */
-export const isRazorpayTestMode = (keyId ?? '').startsWith('rzp_test_')
 
 let client: Razorpay | null = null
 
-export function getRazorpay(): Razorpay | null {
+function getRazorpay(): Razorpay | null {
   if (!isRazorpayConfigured) return null
   if (!client) client = new Razorpay({ key_id: keyId!, key_secret: keySecret! })
   return client

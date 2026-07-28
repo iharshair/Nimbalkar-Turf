@@ -82,7 +82,7 @@ export function BookingEngine({
       <div className="rounded-card border border-chalk/12 bg-night-800/60 p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
           <div className="min-w-0">
-            <p className="flex items-center gap-2 font-display text-[0.66rem] uppercase tracking-[0.18em] text-chalk/40">
+            <p className="flex items-center gap-2 font-display text-[0.66rem] uppercase tracking-[0.18em] text-chalk/60">
               <CalendarClock className="h-3.5 w-3.5 text-neon" aria-hidden />
               {longDate}
             </p>
@@ -95,20 +95,20 @@ export function BookingEngine({
                 <button
                   type="button"
                   onClick={clearSelection}
-                  className="mt-1.5 text-[0.72rem] text-chalk/40 underline underline-offset-4 transition-colors hover:text-chalk"
+                  className="mt-1.5 text-[0.72rem] text-chalk/60 underline underline-offset-4 transition-colors hover:text-chalk"
                 >
                   Clear selection
                 </button>
               </>
             ) : (
-              <p className="mt-2 text-[0.88rem] text-chalk/45">
+              <p className="mt-2 text-[0.88rem] text-chalk/60">
                 No hours selected yet. Tap the slots you want — they can be back to back.
               </p>
             )}
           </div>
 
           <div className="text-right">
-            <p className="font-display text-[0.66rem] uppercase tracking-[0.18em] text-chalk/40">
+            <p className="font-display text-[0.66rem] uppercase tracking-[0.18em] text-chalk/60">
               Total
             </p>
             {/* aria-live so the total is announced as slots are toggled. */}
@@ -118,7 +118,7 @@ export function BookingEngine({
             >
               {formatINR(total)}
             </p>
-            <p className="mt-1.5 text-[0.7rem] text-chalk/35">
+            <p className="mt-1.5 text-[0.7rem] text-chalk/55">
               {selected.length} hour{selected.length === 1 ? '' : 's'} · paid in full online
             </p>
           </div>

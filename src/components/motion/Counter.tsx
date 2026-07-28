@@ -39,7 +39,15 @@ export function Counter({
 
   useIsomorphicLayoutEffect(() => {
     const el = ref.current
-    if (!el || reducedMotion) return
+    if (!el) return
+
+    // Restore explicitly: an earlier commit may have rewound `display` to
+    // zero before the preference resolved, which would otherwise leave the
+    // number stuck at 0 for exactly the users who can't see it animate.
+    if (reducedMotion) {
+      setDisplay(to.toFixed(decimals))
+      return
+    }
 
     // Rewind to zero before paint so the count-up doesn't visibly jump
     // down from the server-rendered final value.

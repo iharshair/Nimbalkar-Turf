@@ -59,6 +59,17 @@ interface PayArgs {
   details: BookingDetails
 }
 
+/** Carries the HTTP status so callers can branch on it, not on prose. */
+class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message)
+    this.name = 'ApiError'
+  }
+}
+
 async function postJSON<T>(url: string, body: unknown): Promise<T> {
   const res = await fetch(url, {
     method: 'POST',
@@ -66,9 +77,20 @@ async function postJSON<T>(url: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   })
   const json = (await res.json().catch(() => ({}))) as T & { error?: string }
-  if (!res.ok) throw new Error(json?.error || `Request failed (${res.status})`)
+  if (!res.ok) throw new ApiError(json?.error || `Request failed (${res.status})`, res.status)
   return json
 }
+
+/**
+ * Safety valve on the checkout promise.
+ *
+ * `submitting` disables Escape, the close button and the backdrop. If
+ * Razorpay ever fires none of `handler`, `ondismiss` or `payment.failed`
+ * — a crashed iframe, a blocked third-party frame — the modal would stay
+ * locked forever with no way out. Comfortably longer than the 10-minute
+ * slot hold, so it can't fire while a payment is legitimately in flight.
+ */
+const CHECKOUT_TIMEOUT_MS = 15 * 60 * 1000
 
 /**
  * Drives the payment leg of a booking.
@@ -139,11 +161,23 @@ export function useRazorpay() {
 
         return await new Promise<PayResult>((resolve) => {
           let settled = false
+          let timeoutId: number | undefined
           const finish = (result: PayResult) => {
             if (settled) return
             settled = true
+            if (timeoutId !== undefined) window.clearTimeout(timeoutId)
             resolve(result)
           }
+
+          timeoutId = window.setTimeout(() => {
+            void release(order.bookingId, order.releaseToken)
+            finish({
+              ok: false,
+              reason: 'error',
+              message:
+                'The payment window stopped responding. Nothing has been charged — please try again.',
+            })
+          }, CHECKOUT_TIMEOUT_MS)
 
           const rzp = new window.Razorpay!({
             key: order.keyId!,
@@ -212,8 +246,11 @@ export function useRazorpay() {
         })
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Something went wrong.'
-        // The server signals a lost race with a recognisable message.
-        const unavailable = /just (been )?taken|no longer available|unavailable/i.test(message)
+        // 409 from /order means a lost race for the slots. Reading the
+        // status is stable; the previous version regex-matched the error
+        // prose, so an innocuous copy edit would have silently broken the
+        // "those slots just went" recovery path.
+        const unavailable = err instanceof ApiError && err.status === 409
         return { ok: false, reason: unavailable ? 'unavailable' : 'error', message }
       } finally {
         setBusy(false)

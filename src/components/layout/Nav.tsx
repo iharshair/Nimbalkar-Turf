@@ -1,10 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, type Variants } from 'framer-motion'
 import { Menu, Phone, X } from 'lucide-react'
 import { BUSINESS, NAV_LINKS } from '@/lib/business'
 import { useActiveSection } from '@/hooks/useActiveSection'
+import { useFocusTrap } from '@/hooks/useFocusTrap'
 import { useSmoothScroll } from '@/components/motion/SmoothScrollProvider'
 import { MagneticButton } from '@/components/motion/MagneticButton'
 import { useBooking } from '@/context/BookingContext'
@@ -188,11 +189,15 @@ function MobileMenu({
   onNavigate: (id: string) => void
 }) {
   const { open: openBooking } = useBooking()
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  useFocusTrap(panelRef, open)
 
   return (
     <AnimatePresence>
       {open ? (
         <motion.div
+          ref={panelRef}
           role="dialog"
           aria-modal="true"
           aria-label="Menu"
@@ -260,7 +265,7 @@ function MobileMenu({
               <Phone className="h-4 w-4" aria-hidden />
               {BUSINESS.phone}
             </a>
-            <p className="pt-2 text-center font-deva text-xs text-chalk/40">
+            <p className="pt-2 text-center font-deva text-xs text-chalk/60">
               {BUSINESS.taglineMr}
             </p>
           </motion.div>

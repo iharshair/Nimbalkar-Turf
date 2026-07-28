@@ -44,7 +44,7 @@ export function Footer() {
 
         {/* Contact */}
         <div className="space-y-4">
-          <h3 className="font-display text-[0.72rem] uppercase tracking-[0.2em] text-chalk/40">
+          <h3 className="font-display text-[0.72rem] uppercase tracking-[0.2em] text-chalk/60">
             Find us
           </h3>
 
@@ -63,7 +63,7 @@ export function Footer() {
               <br />
               {BUSINESS.address.city}, {BUSINESS.address.state} {BUSINESS.address.postalCode}
               <br />
-              <span className="mt-1 inline-block text-chalk/40">
+              <span className="mt-1 inline-block text-chalk/60">
                 Plus Code {BUSINESS.address.plusCode}
               </span>
             </span>
@@ -86,7 +86,7 @@ export function Footer() {
 
         {/* Sections + the policy, restated one last time */}
         <div className="space-y-4">
-          <h3 className="font-display text-[0.72rem] uppercase tracking-[0.2em] text-chalk/40">
+          <h3 className="font-display text-[0.72rem] uppercase tracking-[0.2em] text-chalk/60">
             Explore
           </h3>
           <ul className="grid grid-cols-2 gap-y-2.5 gap-x-4 lg:grid-cols-1">
@@ -122,10 +122,10 @@ export function Footer() {
       <div className="pitch-line" aria-hidden />
 
       <div className="shell flex flex-col items-center justify-between gap-3 py-6 text-center sm:flex-row sm:text-left">
-        <p className="text-xs text-chalk/35">
+        <p className="text-xs text-chalk/55">
           © {year} {BUSINESS.name}. {BUSINESS.address.city}, {BUSINESS.address.state}.
         </p>
-        <p className="text-xs text-chalk/35">
+        <p className="text-xs text-chalk/55">
           {BUSINESS.rating.value} ★ from {BUSINESS.rating.count} Google reviews
         </p>
       </div>

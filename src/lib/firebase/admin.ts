@@ -62,7 +62,7 @@ export function adminConfigProblem(): string | null {
 let adminApp: App | null = null
 let adminDb: Firestore | null = null
 
-export function getAdminApp(): App | null {
+function getAdminApp(): App | null {
   if (!isAdminConfigured) return null
 
   if (!adminApp) {

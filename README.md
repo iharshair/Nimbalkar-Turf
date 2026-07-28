@@ -420,6 +420,40 @@ number, address or rating in a component.
 
 ---
 
+## Production readiness
+
+Audited 2026-07-28. Fixed in that pass: reduced-motion handling, the gallery
+reveal bug, a midnight-rollover pricing bug, duplicate/dropped receipts, order
+rate limiting, booking-id disclosure on the availability endpoint, focus traps,
+text contrast, and the seed script fabricating bookings.
+
+**Not yet built.** These are gaps, not bugs — nothing pretends otherwise in the
+code, but don't mistake the site for feature-complete:
+
+| Missing | Consequence |
+| --- | --- |
+| Authentication | `firestore.rules` and `storage.rules` gate writes on `request.auth.token.admin`, and nothing can ever satisfy that. Only the Admin SDK (which bypasses rules) can write. Booking is guest-only by design, but there is no staff login. |
+| Staff view | `confirmBooking` flags contested bookings `needsAttention: true` with the payment id, and **nothing surfaces them**. Until there's an admin screen, watch this manually: `bookings where needsAttention == true`. |
+| Refunds | `BookingStatus` includes `refunded` and `confirmData` refuses to re-confirm one, but there is no endpoint. Refunds happen in the Razorpay dashboard, and the booking must be updated by hand. |
+| Durable rate limiting | `src/lib/rateLimit.ts` is in-memory and per-instance. It raises the cost of casual abuse; it is not a defence against a distributed attacker. Move it to Upstash Redis or the edge before serious traffic. |
+| Real media | `public/media/**` is generated SVG placeholders and the three videos don't exist. The hero and lightbox both degrade to posters. |
+
+**Known accepted trade-offs:**
+
+- `slotDays` documents are public-read and carry the holding `bookingId`, so
+  booking ids are discoverable by anyone watching the grid over the Firestore
+  path. `/api/slots/[date]` strips them, and nothing treats an id as
+  authorisation (`/api/bookings/release` requires an HMAC token), so this is
+  information disclosure rather than a privilege issue. Removing it entirely
+  would mean splitting availability into a separate public projection.
+- `src/lib/store/local.ts` diverges from Firestore in two ways: it seeds a day
+  on first read, and it writes ISO strings where Firestore writes
+  `serverTimestamp()`. It is development-only and refused in production.
+- Booking references are 5 hex characters (~1M values), so collisions become
+  plausible in the low thousands of bookings. They are display labels, not
+  keys — the Firestore document id is the identity — but widen the alphabet
+  before high volume.
+
 ## Deliberately not built
 
 No dark-mode toggle (the site is dark by design), no blog, no language switcher

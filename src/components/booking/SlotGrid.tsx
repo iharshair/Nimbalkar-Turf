@@ -30,7 +30,7 @@ export function SlotGrid({ slots, selected, loading, onToggle }: SlotGridProps) 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="font-display text-[0.68rem] uppercase tracking-[0.2em] text-chalk/40">
+        <h3 className="font-display text-[0.68rem] uppercase tracking-[0.2em] text-chalk/60">
           2 · Choose your hours
         </h3>
         <SlotLegend />
@@ -71,7 +71,7 @@ export function SlotGrid({ slots, selected, loading, onToggle }: SlotGridProps) 
                     ? 'border-neon bg-neon text-night shadow-neon'
                     : bookable
                       ? 'border-chalk/12 bg-chalk/[0.02] text-chalk hover:-translate-y-0.5 hover:border-neon/50'
-                      : 'cursor-not-allowed border-chalk/[0.07] bg-chalk/[0.015] text-chalk/25',
+                      : 'cursor-not-allowed border-chalk/[0.07] bg-chalk/[0.015] text-chalk/55',
                   disabled && !isSelected && 'hover:translate-y-0',
                 )}
               >
@@ -89,7 +89,7 @@ export function SlotGrid({ slots, selected, loading, onToggle }: SlotGridProps) 
                 <span
                   className={cn(
                     'text-[0.72rem] tabular-nums',
-                    isSelected ? 'text-night/70' : bookable ? 'text-chalk/45' : 'text-chalk/25',
+                    isSelected ? 'text-night/70' : bookable ? 'text-chalk/60' : 'text-chalk/55',
                   )}
                 >
                   {reason ?? formatINR(slot.price)}
@@ -116,7 +116,7 @@ export function SlotGrid({ slots, selected, loading, onToggle }: SlotGridProps) 
       ) : null}
 
       {/* Rate bands, so the varying prices in the grid make sense. */}
-      <p className="text-[0.72rem] leading-relaxed text-chalk/35">
+      <p className="text-[0.72rem] leading-relaxed text-chalk/55">
         {RATE_TIERS.map((t) => t.label).join(' · ')} rates apply by time of day. Weekend evenings
         carry a higher rate — the price on each slot is what you pay.
       </p>
@@ -126,7 +126,7 @@ export function SlotGrid({ slots, selected, loading, onToggle }: SlotGridProps) 
 
 function SlotLegend() {
   return (
-    <ul className="flex flex-wrap items-center gap-3 text-[0.62rem] uppercase tracking-[0.12em] text-chalk/35">
+    <ul className="flex flex-wrap items-center gap-3 text-[0.62rem] uppercase tracking-[0.12em] text-chalk/55">
       <li className="flex items-center gap-1.5">
         <span className="h-2.5 w-2.5 rounded-sm border border-chalk/25" aria-hidden />
         Free

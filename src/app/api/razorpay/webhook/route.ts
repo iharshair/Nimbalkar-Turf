@@ -81,9 +81,10 @@ export async function POST(request: Request) {
 
       const booking = await confirmBooking({ bookingId, paymentId, orderId })
 
-      // Only send receipts if /verify hadn't already done it.
+      // Only send receipts if /verify hadn't already done it. Awaited so
+      // the serverless instance isn't frozen out from under the requests.
       if (!alreadyConfirmed) {
-        void sendReceipts({
+        await sendReceipts({
           reference: bookingReference(bookingId),
           name: booking.name,
           phone: booking.phone,

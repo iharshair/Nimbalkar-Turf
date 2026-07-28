@@ -79,7 +79,7 @@ export function isWeekend(dateISO: string): boolean {
   return day === 0 || day === 6
 }
 
-export function tierForHour(hour: number): RateTier {
+function tierForHour(hour: number): RateTier {
   const tier = RATE_TIERS.find((t) => hour >= t.from && hour < t.to)
   // Hours are always 0–23, but keep the fallback total-safe.
   return tier ?? RATE_TIERS[1]
@@ -99,7 +99,7 @@ export function totalForSlots(dateISO: string, slotIds: string[]): number {
   return slotIds.reduce((sum, id) => sum + priceForHour(dateISO, hourFromSlotId(id)), 0)
 }
 
-export function hourFromSlotId(slotId: string): number {
+function hourFromSlotId(slotId: string): number {
   return Number(slotId.split(':')[0])
 }
 

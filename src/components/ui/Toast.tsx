@@ -81,6 +81,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastContext.Provider value={api}>
       {children}
 
+      {/*
+        Two regions, because politeness is per-region. "Payment taken —
+        booking not confirmed" must interrupt; a copied Plus Code must not.
+        A single polite region could queue the critical message past its own
+        auto-dismiss, so the user would never hear it.
+      */}
       <div
         role="region"
         aria-label="Notifications"
@@ -98,6 +104,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, x: 24, scale: 0.96 }}
                 transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                // Errors and warnings announce immediately; the rest wait
+                // their turn.
+                role={tone === 'error' || tone === 'warning' ? 'alert' : 'status'}
+                aria-live={tone === 'error' || tone === 'warning' ? 'assertive' : 'polite'}
                 className={cn(
                   'pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-xl border',
                   'bg-night-800/95 p-4 shadow-lift backdrop-blur-md',
@@ -117,7 +127,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                   type="button"
                   onClick={() => dismiss(id)}
                   aria-label="Dismiss notification"
-                  className="rounded-md p-1 text-chalk/40 transition-colors hover:text-chalk"
+                  className="rounded-md p-1 text-chalk/60 transition-colors hover:text-chalk"
                 >
                   <X className="h-4 w-4" aria-hidden />
                 </button>

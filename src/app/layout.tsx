@@ -9,6 +9,7 @@ import { ToastProvider } from '@/components/ui/Toast'
 import { BookingProvider } from '@/context/BookingContext'
 import { BookingModal } from '@/components/booking/BookingModal'
 import { SelectionGuard } from '@/components/booking/SelectionGuard'
+import { AnalyticsBootstrap } from '@/components/AnalyticsBootstrap'
 import { Nav } from '@/components/layout/Nav'
 import { Footer } from '@/components/layout/Footer'
 import { WhatsAppFab } from '@/components/layout/WhatsAppFab'
@@ -183,6 +184,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <BookingModal />
               {/* Renders nothing; owns the "drop slots others just took" rule. */}
               <SelectionGuard />
+              {/* Renders nothing; starts Analytics if it's configured. */}
+              <AnalyticsBootstrap />
             </BookingProvider>
           </ToastProvider>
         </SmoothScrollProvider>

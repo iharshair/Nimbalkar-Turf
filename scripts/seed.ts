@@ -1,12 +1,18 @@
 /**
  * Seeds the availability grid.
  *
- *   npm run seed            # next 14 days
- *   npm run seed -- 30      # next 30 days
+ *   npm run seed              # next 14 days, every hour AVAILABLE
+ *   npm run seed -- 30        # next 30 days
+ *   npm run seed -- 14 --demo # fake "busy" pattern, for screenshots only
  *
- * Idempotent-ish: it will not overwrite a day that already has any
- * `booked` slot carrying a bookingId, so you can safely re-run this
- * against a live project without wiping real reservations.
+ * The default opens every hour. That matters: this writes to a real
+ * business's calendar, and the previous behaviour marked 30-60% of hours
+ * `booked` with no corresponding booking — turning away paying customers
+ * for reservations that never existed. The fabricated pattern is now
+ * opt-in behind --demo, which additionally requires --yes to confirm.
+ *
+ * Days that already contain a real booking (a `booked` slot carrying a
+ * bookingId) are always skipped, so re-running is safe.
  *
  * Requires FIREBASE_PROJECT_ID / FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY.
  */
@@ -15,7 +21,8 @@ import { resolve } from 'node:path'
 import { cert, getApps, initializeApp } from 'firebase-admin/app'
 import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 
-import { bookingDates, seedSlotsForDate } from '../src/lib/slots'
+import { ALL_HOURS, bookingDates, seedSlotsForDate, slotId } from '../src/lib/slots'
+import type { StoredSlot } from '../src/types'
 import type { SlotDayDoc } from '../src/types'
 
 /** Minimal .env.local reader so the script needs no extra dependency. */
@@ -36,6 +43,15 @@ function loadDotEnv() {
   }
 }
 
+/** Every hour of the day, free. The correct default for a real ground. */
+function openDay(): Record<string, StoredSlot> {
+  const slots: Record<string, StoredSlot> = {}
+  for (const hour of ALL_HOURS) {
+    slots[slotId(hour)] = { status: 'available', bookingId: null, holdExpiresAt: null }
+  }
+  return slots
+}
+
 async function main() {
   loadDotEnv()
 
@@ -51,7 +67,21 @@ async function main() {
     process.exit(1)
   }
 
-  const days = Number(process.argv[2] ?? 14)
+  const args = process.argv.slice(2)
+  const demo = args.includes('--demo')
+  const days = Number(args.find((a) => !a.startsWith('--')) ?? 14)
+
+  // Writing fabricated "booked" hours to a live project turns away real
+  // customers, so make it impossible to do by accident.
+  if (demo && !args.includes('--yes')) {
+    console.error(
+      '\n  --demo writes FABRICATED bookings that block real customers from\n' +
+        '  those hours. Only use it on a throwaway project.\n\n' +
+        '  Re-run with --yes if that is really what you want:\n' +
+        `    npm run seed -- ${days} --demo --yes\n`,
+    )
+    process.exit(1)
+  }
   if (!Number.isFinite(days) || days < 1 || days > 120) {
     console.error('  Day count must be between 1 and 120.')
     process.exit(1)
@@ -86,7 +116,7 @@ async function main() {
 
       batch.set(ref, {
         date,
-        slots: seedSlotsForDate(date),
+        slots: demo ? seedSlotsForDate(date) : openDay(),
         updatedAt: FieldValue.serverTimestamp(),
       })
       written++
@@ -95,7 +125,10 @@ async function main() {
     await batch.commit()
   }
 
-  console.log(`\n  Seeded ${written} day(s), skipped ${skipped}.\n`)
+  console.log(
+    `\n  Seeded ${written} day(s), skipped ${skipped}. ` +
+      `${demo ? 'DEMO pattern (fabricated bookings).' : 'All hours open.'}\n`,
+  )
   process.exit(0)
 }
 
