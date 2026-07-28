@@ -1,4 +1,5 @@
 import { type App, cert, getApps, initializeApp } from 'firebase-admin/app'
+import { type Auth, getAuth } from 'firebase-admin/auth'
 import { type Firestore, getFirestore } from 'firebase-admin/firestore'
 
 /**
@@ -61,6 +62,7 @@ export function adminConfigProblem(): string | null {
 
 let adminApp: App | null = null
 let adminDb: Firestore | null = null
+let adminAuth: Auth | null = null
 
 function getAdminApp(): App | null {
   if (!isAdminConfigured) return null
@@ -91,6 +93,17 @@ export function getAdminDb(): Firestore | null {
     adminDb.settings({ ignoreUndefinedProperties: true })
   }
   return adminDb
+}
+
+/**
+ * Admin Auth — used to verify staff session cookies and to read the
+ * `admin` custom claim. Null when the service account is absent.
+ */
+export function getAdminAuth(): Auth | null {
+  const app = getAdminApp()
+  if (!app) return null
+  if (!adminAuth) adminAuth = getAuth(app)
+  return adminAuth
 }
 
 export const COLLECTIONS = {

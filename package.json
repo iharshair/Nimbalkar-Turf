@@ -13,7 +13,8 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "seed": "tsx scripts/seed.ts",
-    "gen:placeholders": "node scripts/generate-placeholders.mjs"
+    "gen:placeholders": "node scripts/generate-placeholders.mjs",
+    "grant-admin": "tsx scripts/grant-admin.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "3.9.0",

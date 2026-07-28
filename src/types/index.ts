@@ -77,6 +77,13 @@ export interface Booking {
   conflictSlotIds?: string[]
   /** On a partial conflict, the hours the customer did secure. */
   securedSlotIds?: string[]
+  /* ── Set by the admin panel ── */
+  refundId?: string | null
+  refundedAmount?: number | null
+  /** Email of the staff member who issued the refund. */
+  refundedBy?: string | null
+  /** Email of the staff member who cleared needsAttention by hand. */
+  resolvedBy?: string | null
   createdAt?: unknown
   updatedAt?: unknown
 }

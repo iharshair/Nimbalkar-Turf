@@ -76,6 +76,50 @@ export function verifyPaymentSignature(params: {
   return timingSafeEqual(expected, params.signature)
 }
 
+export interface CreatedRefund {
+  id: string
+  /** Paise, as Razorpay reports it. */
+  amount: number
+  status: string
+}
+
+/**
+ * Issues a refund against a captured payment.
+ *
+ * `speed: 'normal'` rather than 'optimum': optimum attempts an instant
+ * refund and silently falls back, which makes it harder to tell a customer
+ * when their money will actually land. Normal is predictable — 5-7 working
+ * days — and cheaper.
+ *
+ * Idempotent from Razorpay's side per (payment, amount) only if you pass a
+ * receipt; we pass the booking reference so a double-click can't double-refund.
+ */
+export async function createRefund(params: {
+  paymentId: string
+  /** Rupees. Omit to refund the full payment. */
+  amountInRupees?: number
+  receipt: string
+  notes?: Record<string, string>
+}): Promise<CreatedRefund> {
+  const rzp = getRazorpay()
+  if (!rzp) throw new Error('Razorpay is not configured')
+
+  const refund = await rzp.payments.refund(params.paymentId, {
+    ...(params.amountInRupees !== undefined
+      ? { amount: Math.round(params.amountInRupees * 100) }
+      : {}),
+    speed: 'normal',
+    receipt: params.receipt.slice(0, 40),
+    notes: params.notes,
+  })
+
+  return {
+    id: refund.id,
+    amount: Number(refund.amount),
+    status: String(refund.status),
+  }
+}
+
 /**
  * Capability token for /api/bookings/release.
  *

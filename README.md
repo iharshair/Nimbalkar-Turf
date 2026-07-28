@@ -454,6 +454,78 @@ code, but don't mistake the site for feature-complete:
   keys — the Firestore document id is the identity — but widen the alphabet
   before high volume.
 
+## Admin panel
+
+`/admin` — staff only. Bookings, refunds, and taking hours off sale.
+
+### Granting access
+
+Admin access is the `admin: true` custom claim, **not** merely having an
+account: anyone can sign up to a Firebase project. Only the Admin SDK can set a
+custom claim, so there is deliberately no bootstrap path through the UI.
+
+```bash
+# 1. Create the user: Firebase console -> Authentication -> Users -> Add user
+# 2. Grant the claim
+npm run grant-admin -- staff@nimbalkarsportsclub.com
+# Revoke later with --revoke
+```
+
+It's the same claim `firestore.rules` and `storage.rules` already check, so the
+panel and the database rules agree on who counts as staff.
+
+### How the session works
+
+1. The browser signs in with Firebase Auth (`/admin/login`).
+2. The ID token goes to `POST /api/admin/session`, which verifies it, asserts
+   the `admin` claim, and mints an **httpOnly** session cookie. A signed-in user
+   without the claim gets 403 and is signed straight back out.
+3. Every admin page and every `/api/admin/*` route calls `getAdminSession()`
+   independently.
+
+`src/middleware.ts` also checks for the cookie, but **that is a redirect
+convenience, not a security boundary** — middleware runs on the Edge runtime
+where `firebase-admin` can't, so it cannot verify anything. Forging the cookie
+gets you a redirect you didn't need; the page still refuses to render and the
+APIs still return 401.
+
+For the same reason, anything the middleware imports must be Edge-safe, which is
+why the cookie name lives in the dependency-free `src/lib/admin/session.ts`
+rather than in `auth.ts`.
+
+### What it does
+
+| Section | Purpose |
+| --- | --- |
+| **Needs attention** | Bookings where a payment was captured but the hours were already gone. `confirmBooking` has always set this flag; until now nothing read it back. **Check this daily.** |
+| **Find a booking** | Search by phone — for when someone's at the gate claiming they booked. |
+| **A day's bookings** | Any date, with names and click-to-call numbers. |
+| **Block hours** | Takes hours off sale for maintenance. `blocked` existed in the data model and the customer grid rendered it as "Maintenance" from day one; nothing could set it. Refuses to block an hour a customer already holds — that needs a refund conversation, not a checkbox. |
+| **Refund** | Razorpay refund, then frees the slots and sets `refunded`. |
+
+Refunds call Razorpay **first**, Firestore **second**. If Razorpay fails, nothing
+changed and staff can retry. If Razorpay succeeds but the write fails, the
+customer has their money and the booking stays flagged — the safe direction to
+fail in — and the error says exactly that, with the refund id.
+
+`confirmBooking` refuses to re-confirm a `refunded` booking, so a redelivered
+webhook can't quietly re-book refunded hours.
+
+### Design notes
+
+- The admin routes sit in their own route group, so they **don't** inherit Lenis
+  smooth scroll, the boot cursor or the booking modal. Those are scoped to
+  `(site)/layout.tsx`. Hijacked scrolling is fine for thirty seconds on a
+  landing page and hostile in a tool used for an hour.
+- `src/lib/admin/data.ts` is intentionally outside the `BookingStore`
+  abstraction. That exists so the customer flow can fall back to a local JSON
+  file in development, but the panel can't run without a service account at all
+  (staff sign-in needs Firebase Auth), so a local implementation would be
+  unreachable by construction.
+- Queries stay on single-field indexes where possible; "upcoming" uses the
+  `(status, date)` composite already declared in `firestore.indexes.json`.
+- `/admin` is `noindex` via layout metadata **and** disallowed in `robots.ts`.
+
 ## Deploying to Vercel
 
 `.env.local` is gitignored, so **none of the environment variables reach Vercel
