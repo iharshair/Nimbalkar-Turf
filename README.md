@@ -26,13 +26,20 @@ Razorpay and Firebase are separate switches, so you can turn on real (test)
 payments without standing up a database first. The booking panel always states
 which mode it's in — see `SETUP_NOTICE` in `src/lib/runtime.ts`.
 
-| Razorpay | Firebase | Behaviour |
+| Razorpay | Firestore | Behaviour |
 | --- | --- | --- |
-| — | — | Checkout simulated. Grid from seed data. Nothing persists. |
-| `rzp_test_*` | — | **Real test checkout.** Bookings, holds and double-booking protection all work, stored in `.data/store.json`. Grid polls `/api/slots/[date]`. |
-| `rzp_test_*` | configured | Same, with Firestore and live push updates to the grid. |
+| — | — | Checkout simulated. Grid from seed data. Dev only. |
+| `rzp_test_*` | — | Real test checkout, bookings in `.data/store.json`. **Dev only.** |
+| `rzp_test_*` | configured | Real test checkout, bookings in Firestore, live push updates. |
 | `rzp_live_*` | configured | Production. |
-| `rzp_live_*` | — | **Refused.** `/api/razorpay/order` returns 503 rather than take real money into storage that can't keep it. |
+| `rzp_live_*` | — | **Refused** — 503. |
+| any | — | **Refused in a production build** — 503. |
+
+Firestore is the real store. The local JSON backend survives only so a fresh
+clone can run the booking flow before credentials exist; a production build
+without Firestore refuses bookings outright rather than accepting money into
+storage that forgets it. See `storageUnavailableReason()` in
+`src/lib/store/index.ts`.
 
 `NEXT_PUBLIC_FORCE_DEMO_MODE=true` forces the simulated path even with keys
 present, which is useful for a public staging demo.
@@ -43,17 +50,34 @@ In test mode use Razorpay's sandbox instruments — card `4111 1111 1111 1111`
 with any future expiry and any CVV, or UPI id `success@razorpay`. Real cards are
 rejected by test keys, and no money moves.
 
-#### The local store
+#### The local store (development only)
 
 `src/lib/store/local.ts` is a JSON-file backend that mirrors the Firestore
-semantics exactly, including hold expiry and partial-conflict handling. It
-serialises writes through an in-process lock, which stands in for a Firestore
-transaction.
+semantics exactly — hold expiry, partial-conflict handling, idempotent
+confirmation — serialising writes through an in-process lock that stands in for
+a transaction.
 
 It is **not production storage**: no cross-process locking, and serverless
-filesystems are ephemeral. That's why live keys without Firestore are refused
-outright rather than merely warned about. `.data/` is gitignored — it contains
-customer names and phone numbers.
+filesystems are ephemeral. `.data/` is gitignored, since it holds customer names
+and phone numbers.
+
+#### Keeping the Admin credential server-side
+
+Three independent layers, because leaking it would hand over write access to the
+whole database:
+
+1. The env vars carry no `NEXT_PUBLIC_` prefix, so Next.js will not inline them
+   into the client bundle.
+2. `src/lib/firebase/admin.ts` throws on import if `window` is defined, so an
+   accidental import from a client component fails loudly at once rather than
+   shipping a credential.
+3. Nothing client-reachable imports it. `lib/store`, `lib/razorpay` and
+   `lib/notify` are server-only too, and are reached exclusively from `/api`
+   routes.
+
+If the key is malformed, `adminConfigProblem()` reports which variable is wrong
+and how — a misquoted private key otherwise surfaces as an opaque JWT signing
+error from deep inside the SDK.
 
 ---
 
@@ -82,11 +106,13 @@ npm run seed -- 30    # or a longer window
 ```
 
 > **The web config alone is not enough.** `firestore.rules` makes `slotDays`
-> server-only-write, so bookings are written through the Admin SDK. Until
-> `FIREBASE_CLIENT_EMAIL` and `FIREBASE_PRIVATE_KEY` are set, the app keeps
-> using the local store — and the booking grid reads from the local store too,
-> so the two can't disagree. `/api/slots/[date]` reports which backend is
-> authoritative and the client follows it.
+> server-only-write, so bookings go through the Admin SDK. Without
+> `FIREBASE_CLIENT_EMAIL` and `FIREBASE_PRIVATE_KEY` the app falls back to the
+> local store in development, and refuses bookings entirely in production.
+>
+> The booking grid never guesses: `/api/slots/[date]` reports which backend is
+> authoritative and the client follows it, so the read path and the write path
+> cannot disagree.
 
 #### Client SDK modules
 

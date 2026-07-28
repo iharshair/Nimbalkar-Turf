@@ -3,13 +3,12 @@ import { ZodError } from 'zod'
 import { createOrderSchema } from '@/lib/schema'
 import { totalForSlots } from '@/lib/pricing'
 import {
-  STORAGE_BLOCKED_MESSAGE,
   SlotUnavailableError,
   attachOrderId,
   bookingReference,
   holdSlots,
   newBookingId,
-  storageBlockedForLiveKeys,
+  storageUnavailableReason,
   storeKind,
 } from '@/lib/store'
 import {
@@ -90,11 +89,12 @@ export async function POST(request: Request) {
   }
 
   // ── Demo mode: nothing to persist, nothing to charge. ───────────────
-  // Never take real money into storage that can't be trusted to keep it.
-  if (storageBlockedForLiveKeys()) {
-    console.error(`[order] ${STORAGE_BLOCKED_MESSAGE}`)
+  // Never take money into storage that can't be trusted to keep it.
+  const storageProblem = storageUnavailableReason()
+  if (storageProblem) {
+    console.error(`[order] refusing booking — ${storageProblem}`)
     return NextResponse.json(
-      { error: 'Online payment is temporarily unavailable. Please call us to book.' },
+      { error: 'Online booking is temporarily unavailable. Please call us to book.' },
       { status: 503 },
     )
   }

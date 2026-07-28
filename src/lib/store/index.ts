@@ -1,4 +1,4 @@
-import { isAdminConfigured } from '@/lib/firebase/admin'
+import { adminConfigProblem, isAdminConfigured } from '@/lib/firebase/admin'
 import * as firestore from '@/lib/firebase/bookings'
 import * as local from '@/lib/store/local'
 import type { Booking, BookingStatus, StoredSlot } from '@/types'
@@ -62,20 +62,36 @@ const localStore: BookingStore = local
 const backend: BookingStore = isAdminConfigured ? firestoreStore : localStore
 
 /**
- * The local store is not durable: no cross-process locking, and an
- * ephemeral filesystem on serverless hosts. Taking real money with it
- * would mean silently losing bookings, so that combination is refused
- * outright rather than merely warned about.
+ * Whether bookings can be accepted at all, and why not if they can't.
+ *
+ * Firestore is now the real store. The local JSON backend survives only as
+ * a development convenience so a fresh clone can run the booking flow
+ * without credentials — it has no cross-process locking, and serverless
+ * filesystems are ephemeral, so it loses data.
+ *
+ * Two situations therefore refuse the booking outright instead of quietly
+ * degrading, because silently accepting money into storage that forgets it
+ * is the worst possible failure:
+ *
+ *   • a production build without Firestore
+ *   • live Razorpay keys without Firestore, in any environment
+ *
+ * Returns null when it is safe to proceed.
  */
-export function storageBlockedForLiveKeys(): boolean {
-  const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? ''
-  return storeKind === 'local' && keyId.startsWith('rzp_live_')
-}
+export function storageUnavailableReason(): string | null {
+  if (storeKind === 'firestore') return null
 
-export const STORAGE_BLOCKED_MESSAGE =
-  'Live Razorpay keys are configured but Firestore is not. Refusing to take real payments ' +
-  'into local file storage, which is not durable. Set FIREBASE_PROJECT_ID, ' +
-  'FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY before going live.'
+  const detail = adminConfigProblem() ?? 'Firebase Admin credentials are not set'
+  const razorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? ''
+
+  if (process.env.NODE_ENV === 'production') {
+    return `Production requires Firestore. ${detail}.`
+  }
+  if (razorpayKeyId.startsWith('rzp_live_')) {
+    return `Live Razorpay keys require Firestore. ${detail}.`
+  }
+  return null
+}
 
 /* ── Unified API ─────────────────────────────────────────────────────── */
 
