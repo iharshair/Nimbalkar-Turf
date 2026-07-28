@@ -1,21 +1,21 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { type CSSProperties, useEffect, useRef, useState } from 'react'
 import { gsap } from '@/lib/gsap'
 import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion'
 import { useIsDesktop } from '@/hooks/useMediaQuery'
 import { cn } from '@/lib/utils'
 
 /**
- * Site-wide cursor replacement.
+ * Site-wide cursor replacement: a football boot (stud).
  *
  * Three behaviours, all opt-in through data attributes so markup stays
  * declarative:
  *
- *   data-cursor="view|book|play|drag"  → contextual label + grown ring
- *   data-magnetic                      → ring is pulled toward the
+ *   data-cursor="view|book|play|drag"  → contextual label beside the boot
+ *   data-magnetic                      → boot is pulled toward the
  *                                        element's centre within a radius
- *   (any a/button)                     → default grow + colour inversion
+ *   (any a/button)                     → boot grows and turns chalk
  *
  * Hard-disabled on touch devices and when prefers-reduced-motion is set;
  * in both cases the native cursor is restored (see globals.css, which
@@ -38,8 +38,48 @@ const MAGNET_PADDING = 26
 /** 0 = no pull, 1 = cursor snaps to centre. */
 const MAGNET_STRENGTH = 0.42
 
+/* ── Geometry ────────────────────────────────────────────────────────────
+   The artwork is drawn in a 40x30 box with the toe tip at roughly
+   (1, 20). Those fractions place the toe exactly on the pointer, so the
+   boot points at what you're actually about to click rather than hovering
+   near it. */
+const ART_W = 40
+const ART_H = 30
+const TOE_X = 1 / ART_W
+const TOE_Y = 20 / ART_H
+
+/** Side-profile football boot with four studs. Fills with currentColor. */
+function StudGlyph({ className, style }: { className?: string; style?: CSSProperties }) {
+  return (
+    <svg
+      viewBox={`0 0 ${ART_W} ${ART_H}`}
+      className={className}
+      style={style}
+      fill="currentColor"
+      aria-hidden
+      focusable="false"
+    >
+      {/* Upper and sole as one silhouette — bolder, and reads at ~34px. */}
+      <path d="M2 19.2c0-3 3-4.8 6.8-5.8 3.5-.9 6-2.4 8-5l3-3.7c1-1.3 2.4-2 3.9-2h7.1c2.4 0 4.2 1.9 4.2 4.2v12.3h1.2c1 0 1.8.8 1.8 1.8v1.2c0 1.6-1.3 2.9-2.9 2.9H3.9C2.3 25.1 1 23.8 1 22.2V21c0-1 .8-1.8 1.8-1.8H2z" />
+      {/* Studs. */}
+      <rect x="4.5" y="24.9" width="3" height="3.4" rx="1.3" />
+      <rect x="12" y="24.9" width="3" height="3.4" rx="1.3" />
+      <rect x="21" y="24.9" width="3" height="3.4" rx="1.3" />
+      <rect x="30" y="24.9" width="3" height="3.4" rx="1.3" />
+      {/* Laces, punched through in the page background colour. */}
+      <path
+        d="M16.6 10.1l4.2 2.1M19.1 7.1l4.2 2.1"
+        stroke="#0A0E14"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        fill="none"
+      />
+    </svg>
+  )
+}
+
 export function CustomCursor() {
-  const ringRef = useRef<HTMLDivElement>(null)
+  const bootRef = useRef<HTMLDivElement>(null)
   const dotRef = useRef<HTMLDivElement>(null)
   const [variant, setVariant] = useState<Variant>('default')
   const [label, setLabel] = useState<string | null>(null)
@@ -48,11 +88,8 @@ export function CustomCursor() {
 
   const reducedMotion = usePrefersReducedMotion()
   /**
-   * Gate on the same query the markup uses (`lg` + fine pointer). The old
-   * check was `!isTouch`, which is true for a 800px-wide laptop — so
-   * `cursor: none` was applied while the replacement cursor stayed
-   * `hidden lg:block`, leaving no visible cursor at all between 768px and
-   * 1023px.
+   * Gate on the same query the markup uses (`lg` + fine pointer), so
+   * `cursor: none` is never applied without a replacement being visible.
    */
   const isDesktop = useIsDesktop()
   const enabled = !reducedMotion && isDesktop
@@ -63,8 +100,7 @@ export function CustomCursor() {
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
 
-  // Toggle the class that hides the native cursor. Kept off the initial
-  // SSR markup so a touch user never loses their cursor mid-hydration.
+  // Toggle the class that hides the native cursor.
   useEffect(() => {
     const root = document.documentElement
     if (enabled) root.classList.add('cursor-custom')
@@ -74,14 +110,14 @@ export function CustomCursor() {
 
   useEffect(() => {
     if (!enabled) return
-    const ring = ringRef.current
+    const boot = bootRef.current
     const dot = dotRef.current
-    if (!ring || !dot) return
+    if (!boot || !dot) return
 
-    // quickTo gives us a tweened setter — the ring trails, the dot is
+    // quickTo gives us a tweened setter — the boot trails, the dot is
     // near-instant, which reads as weight without feeling laggy.
-    const ringX = gsap.quickTo(ring, 'x', { duration: 0.42, ease: 'power3.out' })
-    const ringY = gsap.quickTo(ring, 'y', { duration: 0.42, ease: 'power3.out' })
+    const bootX = gsap.quickTo(boot, 'x', { duration: 0.42, ease: 'power3.out' })
+    const bootY = gsap.quickTo(boot, 'y', { duration: 0.42, ease: 'power3.out' })
     const dotX = gsap.quickTo(dot, 'x', { duration: 0.1, ease: 'power2.out' })
     const dotY = gsap.quickTo(dot, 'y', { duration: 0.1, ease: 'power2.out' })
 
@@ -93,8 +129,8 @@ export function CustomCursor() {
       let x = e.clientX
       let y = e.clientY
 
-      // Magnetic pull: bend the ring toward the element's centre while
-      // the real pointer keeps its true position (the dot stays honest).
+      // Magnetic pull: bend the boot toward the element's centre while the
+      // real pointer keeps its true position (the dot stays honest).
       if (magnetTarget) {
         const r = magnetTarget.getBoundingClientRect()
         const cx = r.left + r.width / 2
@@ -107,8 +143,8 @@ export function CustomCursor() {
         }
       }
 
-      ringX(x)
-      ringY(y)
+      bootX(x)
+      bootY(y)
       dotX(e.clientX)
       dotY(e.clientY)
     }
@@ -169,46 +205,58 @@ export function CustomCursor() {
 
   if (!mounted || !enabled) return null
 
-  const size =
-    variant === 'labelled' ? 74 : variant === 'interactive' ? 52 : variant === 'hidden' ? 0 : 26
+  const width = variant === 'labelled' ? 46 : variant === 'interactive' ? 46 : 34
+  const height = width * (ART_H / ART_W)
+
+  // A planted boot at rest; drawn back further as you press, like a kick.
+  const rotation = pressed ? -24 : variant === 'default' ? -8 : -15
 
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 z-[200] hidden lg:block">
       {/*
         Two nested elements on purpose: GSAP owns the outer transform
-        (x/y), React owns the inner one (scale/size). Writing both from
+        (x/y), React owns the inner one (rotate/scale). Writing both from
         React would let a re-render clobber the tween mid-flight.
       */}
-      <div ref={ringRef} className="absolute left-0 top-0 will-change-transform">
+      <div ref={bootRef} className="absolute left-0 top-0 will-change-transform">
         <div
-          className={cn(
-            'flex items-center justify-center rounded-full',
-            'border border-chalk/70 bg-chalk/5 backdrop-blur-[1px]',
-            'transition-[width,height,opacity,transform,background-color,border-color]',
-            'duration-300 ease-turf mix-blend-difference',
-            variant === 'labelled' && 'border-transparent bg-chalk',
-          )}
+          className="flex items-center gap-2"
           style={{
-            width: size,
-            height: size,
-            marginLeft: -size / 2,
-            marginTop: -size / 2,
+            // Put the toe of the boot on the actual pointer position.
+            marginLeft: -width * TOE_X,
+            marginTop: -height * TOE_Y,
             opacity: visible && variant !== 'hidden' ? 1 : 0,
-            transform: `scale(${pressed ? 0.82 : 1})`,
+            transition: 'opacity 220ms ease-out',
           }}
         >
+          <StudGlyph
+            className={cn(
+              'shrink-0 drop-shadow-[0_2px_6px_rgba(0,0,0,0.55)]',
+              'transition-[width,height,color,transform] duration-300 ease-turf',
+              variant === 'default' ? 'text-neon' : 'text-chalk',
+            )}
+            // Inline so the size can animate between variants.
+            style={{
+              width,
+              height,
+              transform: `rotate(${rotation}deg) scale(${pressed ? 0.92 : 1})`,
+              transformOrigin: '20% 80%',
+            }}
+          />
+
           {label ? (
-            <span className="font-display text-[0.6rem] uppercase tracking-[0.14em] text-night">
+            <span className="whitespace-nowrap rounded-full bg-chalk px-2.5 py-1 font-display text-[0.6rem] uppercase tracking-[0.14em] text-night shadow-lift">
               {label}
             </span>
           ) : null}
         </div>
       </div>
 
-      {/* Dot — always tracks the true pointer position. */}
+      {/* Dot — always tracks the true pointer position, so the magnetic
+          pull can't cost you precision on the slot grid. */}
       <div
         ref={dotRef}
-        className="absolute left-0 top-0 -ml-[3px] -mt-[3px] h-1.5 w-1.5 rounded-full bg-neon will-change-transform"
+        className="absolute left-0 top-0 -ml-[2px] -mt-[2px] h-1 w-1 rounded-full bg-neon will-change-transform"
         style={{ opacity: visible && variant === 'default' ? 1 : 0 }}
       />
     </div>
