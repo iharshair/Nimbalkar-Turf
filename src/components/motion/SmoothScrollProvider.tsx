@@ -63,7 +63,17 @@ export function SmoothScrollProvider({ children }: { children: React.ReactNode }
     lenisRef.current = lenis
     document.documentElement.classList.add('lenis-active')
 
-    lenis.on('scroll', ScrollTrigger.update)
+    /*
+      Wrapped rather than passed directly. Lenis calls its scroll listener
+      with the Lenis instance, while ScrollTrigger.update's signature is
+      (reset?: boolean) => void — so handing it over raw fails
+      strictFunctionTypes, because Lenis isn't assignable to boolean.
+
+      It also has to be a named reference: lenis.off() compares by
+      identity, so an inline arrow could never be removed.
+    */
+    const onLenisScroll = () => ScrollTrigger.update()
+    lenis.on('scroll', onLenisScroll)
 
     const raf = (time: number) => lenis.raf(time * 1000)
     gsap.ticker.add(raf)
@@ -90,7 +100,7 @@ export function SmoothScrollProvider({ children }: { children: React.ReactNode }
     else void document.fonts?.ready.then(refreshAfterFonts)
 
     return () => {
-      lenis.off('scroll', ScrollTrigger.update)
+      lenis.off('scroll', onLenisScroll)
       gsap.ticker.remove(raf)
       gsap.ticker.lagSmoothing(500, 33)
       lenis.destroy()
