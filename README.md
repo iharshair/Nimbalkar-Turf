@@ -76,10 +76,34 @@ Fill in the six `NEXT_PUBLIC_FIREBASE_*` values, then create a service account
 Deploy the rules and seed the availability grid:
 
 ```bash
-firebase deploy --only firestore:rules,firestore:indexes
+firebase deploy --only firestore:rules,firestore:indexes,storage
 npm run seed          # next 14 days
 npm run seed -- 30    # or a longer window
 ```
+
+> **The web config alone is not enough.** `firestore.rules` makes `slotDays`
+> server-only-write, so bookings are written through the Admin SDK. Until
+> `FIREBASE_CLIENT_EMAIL` and `FIREBASE_PRIVATE_KEY` are set, the app keeps
+> using the local store — and the booking grid reads from the local store too,
+> so the two can't disagree. `/api/slots/[date]` reports which backend is
+> authoritative and the client follows it.
+
+#### Client SDK modules
+
+`src/lib/firebase/client.ts` holds the app and Firestore only, because the
+booking grid imports it and anything in there ships to every visitor.
+Auth, Storage and Analytics live in `src/lib/firebase/services.ts`:
+
+```ts
+import { getFirebaseAuth, getFirebaseStorage, logAnalyticsEvent } from '@/lib/firebase/services'
+```
+
+They're accessor functions rather than bare consts for three reasons: the
+module is evaluated during SSR where `getAuth()` has no browser globals; they
+legitimately return `null` when Firebase isn't configured; and Analytics needs
+an async `isSupported()` check, so it can't be synchronous. Each getter
+memoises, and the Analytics SDK is dynamically imported so it stays out of the
+main bundle.
 
 `npm run seed` skips any day that already contains a real booking, so it is safe
 to re-run against production.

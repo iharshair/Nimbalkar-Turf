@@ -2,6 +2,12 @@
 
 export type SlotStatus = 'available' | 'held' | 'booked' | 'blocked'
 
+/**
+ * Which store the server treats as authoritative for bookings.
+ * 'unknown' until the client has asked — see useSlots.
+ */
+export type StoreBackend = 'unknown' | 'firestore' | 'local'
+
 /** A single bookable hour, as rendered by the slot grid. */
 export interface Slot {
   /** Slot start in 24h "HH:mm". Doubles as the Firestore map key. */

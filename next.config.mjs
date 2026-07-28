@@ -5,7 +5,10 @@ const nextConfig = {
   images: {
     // Swap in your CDN / Firebase Storage bucket host when real media lands.
     remotePatterns: [
+      // Legacy bucket host.
       { protocol: 'https', hostname: 'firebasestorage.googleapis.com' },
+      // Current host for buckets created as <project>.firebasestorage.app.
+      { protocol: 'https', hostname: '*.firebasestorage.app' },
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
     ],
   },

@@ -10,7 +10,7 @@ import { MagneticButton } from '@/components/motion/MagneticButton'
 import { OVERTIME_POLICY, formatINR } from '@/lib/pricing'
 import { describeSlotRanges, cn, fromISODate } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
-import { SETUP_NOTICE } from '@/lib/runtime'
+import { buildSetupNotice } from '@/lib/runtime'
 
 /**
  * Date picker + live slot grid + running total.
@@ -27,7 +27,7 @@ export function BookingEngine({
   compact?: boolean
 }) {
   const { date, setDate, selected, toggleSlot, total, clearSelection } = useBooking()
-  const { slots, loading, error, source } = useSlots(date)
+  const { slots, loading, error, source, backend } = useSlots(date)
   const { warning } = useToast()
 
   // If live data disappears mid-session, say so once rather than silently
@@ -41,6 +41,7 @@ export function BookingEngine({
   // job, not ours — this component can be mounted twice during the
   // checkout modal's transition, and that invariant needs a single owner.
 
+  const notice = buildSetupNotice(backend)
   const ranges = describeSlotRanges(selected)
   const longDate = fromISODate(date).toLocaleDateString('en-IN', {
     weekday: 'long',
@@ -53,13 +54,15 @@ export function BookingEngine({
       {/*
         Describes what is actually wired up. "Payment is simulated" and
         "payment is real but in test mode" are very different promises to
-        make to someone about to type a card number.
+        make to someone about to type a card number. `backend` comes from
+        the server, since the browser can't see whether the Admin SDK is
+        configured.
       */}
-      {SETUP_NOTICE ? (
+      {notice ? (
         <p className="flex items-start gap-2.5 rounded-xl border border-amber/25 bg-amber/[0.06] p-3.5 text-[0.78rem] leading-relaxed text-amber/90">
           <Zap className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
           <span>
-            <strong className="font-semibold">{SETUP_NOTICE.title}.</strong> {SETUP_NOTICE.body}
+            <strong className="font-semibold">{notice.title}.</strong> {notice.body}
           </span>
         </p>
       ) : null}
