@@ -2,7 +2,7 @@
   "name": "nimbalkar-sports-club",
   "version": "1.0.0",
   "private": true,
-  "description": "Nimbalkar Sports Club — turf booking website with real-time slot availability and Razorpay checkout.",
+  "description": "Nimbalkar Sports Club \u2014 turf booking website with real-time slot availability and Razorpay checkout.",
   "engines": {
     "node": ">=18.18.0"
   },
@@ -36,6 +36,8 @@
     "@types/node": "20.16.5",
     "@types/react": "18.3.7",
     "@types/react-dom": "18.3.0",
+    "@typescript-eslint/eslint-plugin": "7.2.0",
+    "@typescript-eslint/parser": "7.2.0",
     "autoprefixer": "10.4.20",
     "eslint": "8.57.0",
     "eslint-config-next": "14.2.13",
