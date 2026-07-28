@@ -1,0 +1,49 @@
+rules_version = '2';
+
+// Cloud Storage rules for nimbalkar-turf.
+//
+// Intended contents: gallery photography and video for the site, which is
+// public marketing material. So: world-readable, but writable only by an
+// authenticated admin — an open write rule on a Storage bucket is how you
+// end up hosting someone else's files at your expense.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    function isVideo() {
+      return request.resource.contentType.matches('video/.*');
+    }
+
+    // Public gallery media.
+    match /gallery/{allPaths=**} {
+      allow read: if true;
+      // 12 MB ceiling on stills.
+      allow write: if isAdmin() && isImage() && request.resource.size < 12 * 1024 * 1024;
+    }
+
+    match /video/{allPaths=**} {
+      allow read: if true;
+      // 200 MB ceiling; prefer a CDN for anything larger.
+      allow write: if isAdmin() && isVideo() && request.resource.size < 200 * 1024 * 1024;
+    }
+
+    // Anything a customer uploads against their own booking (a dispute
+    // photo, say) is private to them and to staff.
+    match /bookings/{bookingId}/{allPaths=**} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Deny everything not matched above.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

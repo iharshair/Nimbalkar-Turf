@@ -1,0 +1,225 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --night: #0a0e14;
+    --turf-dark: #0b3d24;
+    --turf: #146b3a;
+    --neon: #39ff6e;
+    --amber: #fbbf24;
+    --chalk: #f4f6f1;
+    /* Sticky nav height — used for scroll offsets and section padding. */
+    --nav-h: 72px;
+  }
+
+  * {
+    @apply border-chalk/10;
+  }
+
+  html {
+    @apply bg-night text-chalk;
+    -webkit-tap-highlight-color: transparent;
+    /* Reserve the scrollbar track so locking the page for a modal doesn't
+       shift the layout sideways by ~15px. */
+    scrollbar-gutter: stable;
+  }
+
+  /*
+    Lenis's own stylesheet, inlined rather than imported from the package
+    so there's no build-time dependency on its dist path. Lenis puts
+    `lenis`, `lenis-smooth` and `lenis-stopped` on <html>; `lenis-active`
+    is ours, set by SmoothScrollProvider.
+
+    `lenis-stopped { overflow: hidden }` is the one that matters most —
+    it's what makes lenis.stop() actually lock the page behind a modal.
+  */
+  html.lenis,
+  html.lenis body {
+    height: auto;
+  }
+
+  .lenis.lenis-smooth {
+    scroll-behavior: auto !important;
+  }
+
+  .lenis.lenis-smooth [data-lenis-prevent] {
+    overscroll-behavior: contain;
+  }
+
+  .lenis.lenis-stopped {
+    overflow: hidden;
+  }
+
+  .lenis.lenis-smooth iframe {
+    pointer-events: none;
+  }
+
+  /* Lenis owns the scroll position, so the browser must not also try to
+     smooth-scroll: anchor jumps would fight the Lenis tween. */
+  html.lenis-active {
+    scroll-behavior: auto !important;
+  }
+
+  body {
+    @apply font-body text-body-lg antialiased;
+    /* Prevents a horizontal scrollbar from pinned/parallax overshoot. */
+    overflow-x: clip;
+  }
+
+  /* Native cursor is only hidden once the custom cursor is actually live
+     (desktop, fine pointer, motion allowed). Touch users keep theirs. */
+  html.cursor-custom,
+  html.cursor-custom * {
+    cursor: none !important;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display font-normal uppercase;
+  }
+
+  ::selection {
+    @apply bg-neon text-night;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-neon ring-offset-2 ring-offset-night;
+  }
+
+  /* Scroll-margin so anchored sections clear the sticky nav. */
+  section[id] {
+    scroll-margin-top: var(--nav-h);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0a0e14;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1a2333;
+    border-radius: 99px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #146b3a;
+  }
+}
+
+@layer components {
+  /*
+    Reveal starting states live here, not in JS. Anyone who has asked for
+    reduced motion — or who loads the page before hydration — sees fully
+    visible content, because this block is scoped to no-preference.
+  */
+  @media (prefers-reduced-motion: no-preference) {
+    [data-reveal],
+    [data-reveal-group] > * {
+      opacity: 0;
+      will-change: opacity, transform;
+    }
+  }
+
+  .shell {
+    @apply mx-auto w-full max-w-shell px-5 sm:px-8 lg:px-12;
+  }
+
+  .eyebrow {
+    @apply font-display text-eyebrow uppercase text-neon;
+  }
+
+  /*
+    Turf grain. An inline feTurbulence beats shipping a noise PNG: no
+    extra request, and it scales to any viewport.
+  */
+  .turf-noise::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.05;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Thin chalk stroke used as a section divider — the pitch-line motif. */
+  .pitch-line {
+    @apply h-px w-full bg-pitch-line;
+  }
+
+  .card {
+    @apply relative overflow-hidden rounded-card border border-chalk/10 bg-night-800/70 shadow-inset-line backdrop-blur-sm;
+  }
+
+  /* Loading placeholder with a travelling highlight. */
+  .skeleton {
+    @apply relative overflow-hidden rounded-lg bg-chalk/[0.06];
+  }
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0 -translate-x-full animate-shimmer;
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      rgba(244, 246, 241, 0.09),
+      transparent
+    );
+  }
+
+  /* Field validation states for the booking form. */
+  .field-error {
+    @apply border-red-500/70 shadow-[0_0_0_3px_rgba(239,68,68,0.16)];
+  }
+  .field-valid {
+    @apply border-neon/60 shadow-[0_0_0_3px_rgba(57,255,110,0.12)];
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .text-pretty {
+    text-wrap: pretty;
+  }
+
+  /* Fades the far edges of a horizontally scrolling rail. */
+  .mask-fade-x {
+    mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Click ripple for MagneticButton. */
+@keyframes ripple {
+  from {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0.85;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(38);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

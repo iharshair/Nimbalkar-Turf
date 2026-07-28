@@ -1,0 +1,50 @@
+rules_version = '2';
+
+// Nimbalkar Sports Club — Firestore security rules.
+//
+// Principle: the slot grid is PUBLIC READ (the site shows live
+// availability to anonymous visitors) but WRITE-ONLY via the Admin
+// SDK from /api routes. A client can never mark a slot booked, and
+// can never read another customer's phone number.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
+    // Availability grid: one doc per calendar day, keyed YYYY-MM-DD.
+    // Readable by anyone so the booking engine can stream updates.
+    // Mutated only by the server (Admin SDK bypasses these rules).
+    //
+    // Note: these documents carry the `bookingId` holding each slot, so a
+    // booking id is public. It is therefore NOT treated as authorisation
+    // anywhere — /api/bookings/release requires an HMAC capability token,
+    // and `bookings` documents remain owner-read only.
+    match /slotDays/{date} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Bookings hold customer PII. Owners may read their own record;
+    // nobody may create/modify one from the client — payment must be
+    // verified server-side first.
+    match /bookings/{bookingId} {
+      allow read: if isAdmin()
+        || (request.auth != null && request.auth.uid == resource.data.userId);
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Optional customer profiles (Firebase Auth accounts).
+    match /customers/{uid} {
+      allow read, update: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid;
+      allow delete: if isAdmin();
+    }
+
+    // Deny everything not explicitly matched above.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
