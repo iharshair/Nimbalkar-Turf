@@ -454,6 +454,76 @@ code, but don't mistake the site for feature-complete:
   keys — the Firestore document id is the identity — but widen the alphabet
   before high volume.
 
+## Deploying to Vercel
+
+`.env.local` is gitignored, so **none of the environment variables reach Vercel
+by cloning the repo**. They have to be added to the project. Until they are,
+production behaves like this:
+
+```
+no FIREBASE_* admin vars  ->  isAdminConfigured = false
+                          ->  storeKind = 'local'
+NODE_ENV = 'production'   ->  storageUnavailableReason() returns a reason
+                          ->  /api/razorpay/order  returns 503
+                          ->  /api/slots/[date]    returns 503
+```
+
+The booking button then reports "Online booking is temporarily unavailable" and
+the grid falls back to indicative times. That is the guard working as intended —
+it refuses to take money the app cannot durably record.
+
+### Required variables
+
+Vercel → Settings → Environment Variables → paste into the bulk `.env` import
+box (one paste, rather than adding each by hand):
+
+| Variable | Secret? | Notes |
+| --- | --- | --- |
+| `NEXT_PUBLIC_RAZORPAY_KEY_ID` | no | ships in the client bundle by design |
+| `RAZORPAY_KEY_SECRET` | **yes** | server only |
+| `RAZORPAY_WEBHOOK_SECRET` | **yes** | optional; `/verify` covers the happy path without it |
+| `NEXT_PUBLIC_FIREBASE_*` (7) | no | web config is public by design |
+| `FIREBASE_PROJECT_ID` | no | |
+| `FIREBASE_CLIENT_EMAIL` | **yes** | from the service-account JSON |
+| `FIREBASE_PRIVATE_KEY` | **yes** | keep the literal `\n` escapes; no surrounding quotes needed in Vercel |
+| `NEXT_PUBLIC_SITE_URL` | no | **set to the real domain**, not localhost — drives `metadataBase`, `sitemap.xml` and `robots.txt` |
+
+### Two things that catch people out
+
+1. **Redeploy after saving.** `NEXT_PUBLIC_*` values are inlined into the client
+   bundle at build time, so saving a variable changes nothing until the next
+   build. Server-only values are read at runtime, but redeploy anyway.
+2. **`FIREBASE_PRIVATE_KEY` must keep its `\n` escapes.** If they get stripped,
+   `adminConfigProblem()` reports exactly that rather than letting it surface as
+   an opaque JWT signing error.
+
+### Verify it worked
+
+`GET /api/health` performs a real Firestore read and reports what is actually
+wired up. Expect:
+
+```json
+{ "ok": true, "bookingsAccepted": true, "store": "firestore",
+  "razorpay": { "configured": true, "mode": "test" } }
+```
+
+`503` with `adminProblem` naming a variable means that variable is still
+missing. `firestoreRead.ok: false` with a permissions message means the rules
+aren't deployed — run
+`firebase deploy --only firestore:rules,firestore:indexes,storage`.
+
+### Test mode vs real money
+
+`rzp_test_*` keys only work against Razorpay's sandbox: card
+`4111 1111 1111 1111` (any future expiry, any CVV) or UPI id `success@razorpay`.
+Real cards are declined and no money moves — which is what you want until the
+flow is proven.
+
+Taking real payments needs `rzp_live_*` keys from a KYC-activated Razorpay
+account. Note that live keys additionally **require** Firestore: with live keys
+and no service account, `/api/razorpay/order` refuses outright rather than
+accepting money into non-durable storage.
+
 ## Linting
 
 `next build` runs ESLint and **fails the build on lint errors**, so config
