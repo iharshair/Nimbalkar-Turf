@@ -2,14 +2,16 @@ import { NextResponse } from 'next/server'
 import { ZodError } from 'zod'
 import { createOrderSchema } from '@/lib/schema'
 import { totalForSlots } from '@/lib/pricing'
-import { isAdminConfigured } from '@/lib/firebase/admin'
 import {
+  STORAGE_BLOCKED_MESSAGE,
   SlotUnavailableError,
   attachOrderId,
   bookingReference,
   holdSlots,
   newBookingId,
-} from '@/lib/firebase/bookings'
+  storageBlockedForLiveKeys,
+  storeKind,
+} from '@/lib/store'
 import {
   RAZORPAY_KEY_ID,
   createOrder,
@@ -88,15 +90,21 @@ export async function POST(request: Request) {
   }
 
   // ── Demo mode: nothing to persist, nothing to charge. ───────────────
-  if (forceDemo || !isAdminConfigured || !isRazorpayConfigured) {
+  // Never take real money into storage that can't be trusted to keep it.
+  if (storageBlockedForLiveKeys()) {
+    console.error(`[order] ${STORAGE_BLOCKED_MESSAGE}`)
+    return NextResponse.json(
+      { error: 'Online payment is temporarily unavailable. Please call us to book.' },
+      { status: 503 },
+    )
+  }
+
+  // Demo mode is now only about Razorpay: bookings persist either way,
+  // to Firestore or to the local store.
+  if (forceDemo || !isRazorpayConfigured) {
     const reason = forceDemo
       ? 'NEXT_PUBLIC_FORCE_DEMO_MODE is set'
-      : `${[
-          !isAdminConfigured ? 'Firebase Admin' : null,
-          !isRazorpayConfigured ? 'Razorpay' : null,
-        ]
-          .filter(Boolean)
-          .join(' and ')} not configured`
+      : 'Razorpay keys not configured'
     console.info(`[order] demo mode — ${reason}`)
 
     return NextResponse.json({
@@ -113,6 +121,7 @@ export async function POST(request: Request) {
 
   try {
     await holdSlots({ bookingId, date, slotIds: uniqueSlots, details })
+    console.info(`[order] held ${uniqueSlots.length} slot(s) in ${storeKind} store`, { bookingId })
   } catch (err) {
     if (err instanceof SlotUnavailableError) {
       // 409 — the client turns this into "those slots just went".

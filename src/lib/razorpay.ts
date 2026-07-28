@@ -4,11 +4,16 @@ import Razorpay from 'razorpay'
 /** Server-only Razorpay helpers. Never import this into a client component. */
 
 const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
-const keySecret = process.env.RAZORPAY_KEY_SECRET
+// RAZORPAY_SECRET is accepted as an alias: it's what the Razorpay
+// dashboard calls the field, and mismatched naming here fails in a way
+// that looks like "payments just don't work".
+const keySecret = process.env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_SECRET
 const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET
 
 export const isRazorpayConfigured = Boolean(keyId && keySecret)
 export const RAZORPAY_KEY_ID = keyId ?? null
+/** True for rzp_test_* keys — used to label the UI honestly. */
+export const isRazorpayTestMode = (keyId ?? '').startsWith('rzp_test_')
 
 let client: Razorpay | null = null
 

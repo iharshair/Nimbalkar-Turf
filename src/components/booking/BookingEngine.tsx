@@ -10,6 +10,7 @@ import { MagneticButton } from '@/components/motion/MagneticButton'
 import { OVERTIME_POLICY, formatINR } from '@/lib/pricing'
 import { describeSlotRanges, cn, fromISODate } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
+import { SETUP_NOTICE } from '@/lib/runtime'
 
 /**
  * Date picker + live slot grid + running total.
@@ -49,13 +50,24 @@ export function BookingEngine({
 
   return (
     <div className={cn('space-y-8', compact && 'space-y-6')}>
-      {source === 'demo' ? (
+      {/*
+        Describes what is actually wired up. "Payment is simulated" and
+        "payment is real but in test mode" are very different promises to
+        make to someone about to type a card number.
+      */}
+      {SETUP_NOTICE ? (
         <p className="flex items-start gap-2.5 rounded-xl border border-amber/25 bg-amber/[0.06] p-3.5 text-[0.78rem] leading-relaxed text-amber/90">
           <Zap className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
           <span>
-            <strong className="font-semibold">Demo data.</strong> Firebase isn&apos;t connected yet,
-            so this grid is indicative and payment is simulated. Add your credentials to go live.
+            <strong className="font-semibold">{SETUP_NOTICE.title}.</strong> {SETUP_NOTICE.body}
           </span>
+        </p>
+      ) : null}
+
+      {source === 'demo' ? (
+        <p className="rounded-xl border border-chalk/15 bg-chalk/[0.03] p-3.5 text-[0.78rem] leading-relaxed text-chalk/60">
+          Showing indicative times — we couldn&apos;t reach live availability. Please call to
+          confirm before paying.
         </p>
       ) : null}
 

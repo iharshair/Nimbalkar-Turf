@@ -2,8 +2,17 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { COLLECTIONS, getAdminDb } from '@/lib/firebase/admin'
 import { HOLD_TTL_MS, effectiveStatus } from '@/lib/slots'
 import { totalForSlots } from '@/lib/pricing'
+import {
+  BookingNotConfirmableError,
+  ConfirmationConflictError,
+  SlotUnavailableError,
+} from '@/lib/store/errors'
 import type { Booking, BookingStatus, SlotDayDoc, StoredSlot } from '@/types'
 import type { BookingDetails } from '@/lib/schema'
+
+// Re-exported for callers that import from this module directly. Both
+// storage backends throw these same types — see lib/store/errors.ts.
+export { BookingNotConfirmableError, ConfirmationConflictError, SlotUnavailableError }
 
 /**
  * Server-side booking lifecycle.
@@ -22,17 +31,6 @@ import type { BookingDetails } from '@/lib/schema'
  *              whose TTL has lapsed reads as available everywhere
  *              (see `effectiveStatus`).
  */
-
-export class SlotUnavailableError extends Error {
-  constructor(public readonly conflicts: string[]) {
-    super(
-      conflicts.length === 1
-        ? `Slot ${conflicts[0]} was just taken`
-        : `${conflicts.length} of your slots were just taken`,
-    )
-    this.name = 'SlotUnavailableError'
-  }
-}
 
 function slotDayRef(date: string) {
   const db = getAdminDb()
@@ -138,30 +136,6 @@ export async function attachOrderId(bookingId: string, orderId: string): Promise
  * to call us. Silently returning "confirmed" here would hand someone a
  * receipt for hours they don't own.
  */
-export class ConfirmationConflictError extends Error {
-  constructor(
-    public readonly bookingId: string,
-    /** Slots another booking took while payment was in flight. */
-    public readonly conflicts: string[],
-    /** Slots we did manage to secure — the customer keeps these. */
-    public readonly secured: string[],
-  ) {
-    super(`Booking ${bookingId} lost ${conflicts.length} slot(s) before confirmation`)
-    this.name = 'ConfirmationConflictError'
-  }
-}
-
-/** A payment arrived for a booking that has already been refunded. */
-export class BookingNotConfirmableError extends Error {
-  constructor(
-    public readonly bookingId: string,
-    public readonly status: BookingStatus,
-  ) {
-    super(`Booking ${bookingId} cannot be confirmed from status "${status}"`)
-    this.name = 'BookingNotConfirmableError'
-  }
-}
-
 /**
  * Marks a booking paid and its slots permanently booked.
  * Idempotent — safe to call from both /verify and the webhook.
@@ -299,6 +273,14 @@ export async function releaseBooking(
     )
     tx.set(bRef, { status, updatedAt: FieldValue.serverTimestamp() }, { merge: true })
   })
+}
+
+/** Reads one day's availability map. Empty when the day has no doc yet. */
+export async function getSlotDay(date: string): Promise<Record<string, StoredSlot>> {
+  const db = getAdminDb()
+  if (!db) return {}
+  const snap = await slotDayRef(date).get()
+  return (snap.data() as SlotDayDoc | undefined)?.slots ?? {}
 }
 
 export async function getBooking(bookingId: string): Promise<Booking | null> {

@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { X } from 'lucide-react'
 import { useBooking } from '@/context/BookingContext'
 import { useRazorpay } from '@/hooks/useRazorpay'
+import { broadcastSlotsRefresh } from '@/hooks/useSlots'
 import { useSmoothScroll } from '@/components/motion/SmoothScrollProvider'
 import { useToast } from '@/components/ui/Toast'
 import { BookingEngine } from '@/components/booking/BookingEngine'
@@ -66,6 +67,8 @@ export function BookingModal() {
       if (result.ok) {
         setConfirmed(result.booking)
         setStep('success')
+        // The hours are gone now — tell every mounted grid at once.
+        broadcastSlotsRefresh()
         success(
           result.booking.demo ? 'Demo booking complete' : 'Payment received',
           `Reference ${result.booking.reference}.`,

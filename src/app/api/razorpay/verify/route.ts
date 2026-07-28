@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server'
 import { ZodError } from 'zod'
 import { verifyPaymentSchema } from '@/lib/schema'
-import { isAdminConfigured } from '@/lib/firebase/admin'
 import {
   BookingNotConfirmableError,
   ConfirmationConflictError,
   bookingReference,
   confirmBooking,
   getBooking,
-} from '@/lib/firebase/bookings'
+} from '@/lib/store'
 import { describeSlotRanges } from '@/lib/utils'
 import { isRazorpayConfigured, verifyPaymentSignature } from '@/lib/razorpay'
 import { sendReceipts } from '@/lib/notify'
@@ -24,7 +23,7 @@ export const runtime = 'nodejs'
  * never trusted on the client's word.
  */
 export async function POST(request: Request) {
-  if (!isAdminConfigured || !isRazorpayConfigured) {
+  if (!isRazorpayConfigured) {
     return NextResponse.json({ error: 'Payments are not configured' }, { status: 503 })
   }
 

@@ -17,8 +17,9 @@ const config = {
  */
 export const isFirebaseConfigured = Boolean(config.apiKey && config.projectId && config.appId)
 
-export const isDemoMode =
-  process.env.NEXT_PUBLIC_FORCE_DEMO_MODE === 'true' || !isFirebaseConfigured
+// Note: there is deliberately no `isDemoMode` here. Payment mode and
+// storage mode are independent now — see src/lib/runtime.ts, which is the
+// single place that reasons about what is actually wired up.
 
 let app: FirebaseApp | null = null
 let db: Firestore | null = null

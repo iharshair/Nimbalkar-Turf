@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { isAdminConfigured } from '@/lib/firebase/admin'
-import { releaseBooking } from '@/lib/firebase/bookings'
+import { releaseBooking } from '@/lib/store'
 import { verifyReleaseToken } from '@/lib/razorpay'
 
 export const dynamic = 'force-dynamic'
@@ -26,8 +25,6 @@ const schema = z.object({
  * present the HMAC token that /api/razorpay/order issued to them.
  */
 export async function POST(request: Request) {
-  if (!isAdminConfigured) return NextResponse.json({ ignored: true })
-
   let input: z.infer<typeof schema>
   try {
     input = schema.parse(await request.json())

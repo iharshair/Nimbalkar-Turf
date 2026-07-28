@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { isAdminConfigured } from '@/lib/firebase/admin'
 import {
   BookingNotConfirmableError,
   ConfirmationConflictError,
@@ -8,7 +7,7 @@ import {
   findBookingByOrderId,
   getBooking,
   releaseBooking,
-} from '@/lib/firebase/bookings'
+} from '@/lib/store'
 import { isWebhookConfigured, verifyWebhookSignature } from '@/lib/razorpay'
 import { sendReceipts } from '@/lib/notify'
 
@@ -29,7 +28,7 @@ export const runtime = 'nodejs'
  * confirmBooking is idempotent, so a duplicate delivery is harmless.
  */
 export async function POST(request: Request) {
-  if (!isAdminConfigured || !isWebhookConfigured) {
+  if (!isWebhookConfigured) {
     // 200 so Razorpay doesn't retry against an unconfigured environment.
     console.info('[webhook] ignored — not configured')
     return NextResponse.json({ ignored: true })

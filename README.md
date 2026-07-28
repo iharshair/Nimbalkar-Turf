@@ -16,23 +16,44 @@ Firebase (Firestore + Auth) · Razorpay · React Hook Form + Zod
 
 ```bash
 npm install
-cp .env.example .env.local     # optional — see "Demo mode" below
+cp .env.example .env.local     # optional — see the mode table below
 npm run dev                    # http://localhost:3000
 ```
 
-### Demo mode
+### Payments and storage are configured independently
 
-**The site runs with no credentials at all.** With Firebase and Razorpay keys
-absent it boots in demo mode:
+Razorpay and Firebase are separate switches, so you can turn on real (test)
+payments without standing up a database first. The booking panel always states
+which mode it's in — see `SETUP_NOTICE` in `src/lib/runtime.ts`.
 
-- the slot grid is filled from deterministic seed data (`seedSlotsForDate`),
-- `/api/razorpay/order` returns `demo: true` and checkout is simulated,
-- a visible amber banner in the booking panel says so.
+| Razorpay | Firebase | Behaviour |
+| --- | --- | --- |
+| — | — | Checkout simulated. Grid from seed data. Nothing persists. |
+| `rzp_test_*` | — | **Real test checkout.** Bookings, holds and double-booking protection all work, stored in `.data/store.json`. Grid polls `/api/slots/[date]`. |
+| `rzp_test_*` | configured | Same, with Firestore and live push updates to the grid. |
+| `rzp_live_*` | configured | Production. |
+| `rzp_live_*` | — | **Refused.** `/api/razorpay/order` returns 503 rather than take real money into storage that can't keep it. |
 
-This is so the entire booking UX can be reviewed before any account exists. Add
-credentials to `.env.local` and it switches to live automatically. To force demo
-mode on a staging deploy even with keys present, set
-`NEXT_PUBLIC_FORCE_DEMO_MODE=true`.
+`NEXT_PUBLIC_FORCE_DEMO_MODE=true` forces the simulated path even with keys
+present, which is useful for a public staging demo.
+
+#### Test cards
+
+In test mode use Razorpay's sandbox instruments — card `4111 1111 1111 1111`
+with any future expiry and any CVV, or UPI id `success@razorpay`. Real cards are
+rejected by test keys, and no money moves.
+
+#### The local store
+
+`src/lib/store/local.ts` is a JSON-file backend that mirrors the Firestore
+semantics exactly, including hold expiry and partial-conflict handling. It
+serialises writes through an in-process lock, which stands in for a Firestore
+transaction.
+
+It is **not production storage**: no cross-process locking, and serverless
+filesystems are ephemeral. That's why live keys without Firestore are refused
+outright rather than merely warned about. `.data/` is gitignored — it contains
+customer names and phone numbers.
 
 ---
 

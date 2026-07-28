@@ -9,6 +9,9 @@ dist
 .env*.local
 !.env.example
 
+# Local booking store — contains customer names and phone numbers
+.data
+
 # Firebase service account — never commit
 serviceAccount.json
 *-firebase-adminsdk-*.json
