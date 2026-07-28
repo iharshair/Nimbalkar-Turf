@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000" role="img" aria-label="GROUND TOUR">
+  <defs>
+    <linearGradient id="turf" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0B3D24"/>
+      <stop offset="55%" stop-color="#082B1A"/>
+      <stop offset="100%" stop-color="#0A0E14"/>
+    </linearGradient>
+    <radialGradient id="bloom" cx="0.35" cy="0.3" r="0.55">
+      <stop offset="0%" stop-color="#39FF6E" stop-opacity="0.34"/>
+      <stop offset="45%" stop-color="#146B3A" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#0A0E14" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+    <linearGradient id="scrim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="45%" stop-color="#0A0E14" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#0A0E14" stop-opacity="0.92"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1000" height="1000" fill="url(#turf)"/>
+  <!-- Mown stripes -->
+  <rect x="0" y="0" width="111.11111111111111" height="1000" fill="#F4F6F1" fill-opacity="0.014"/><rect x="222.22222222222223" y="0" width="111.11111111111111" height="1000" fill="#F4F6F1" fill-opacity="0.014"/><rect x="444.44444444444446" y="0" width="111.11111111111111" height="1000" fill="#F4F6F1" fill-opacity="0.014"/><rect x="666.6666666666667" y="0" width="111.11111111111111" height="1000" fill="#F4F6F1" fill-opacity="0.014"/><rect x="888.8888888888889" y="0" width="111.11111111111111" height="1000" fill="#F4F6F1" fill-opacity="0.014"/>
+  <rect width="1000" height="1000" fill="url(#bloom)"/>
+  
+    <path d="M 60 900 L 940 900"
+          stroke="#F4F6F1" stroke-opacity="0.2" stroke-width="2"/>
+    <path d="M 60 900 A 140 140 0 0 0 200 900"
+          fill="none" stroke="#F4F6F1" stroke-opacity="0.2" stroke-width="2"/>
+  <rect width="1000" height="1000" filter="url(#grain)" opacity="0.05"/>
+  <rect width="1000" height="1000" fill="url(#scrim)"/>
+
+  <text x="60" y="946" fill="#F4F6F1" fill-opacity="0.9"
+        font-family="Impact, Haettenschweiler, sans-serif" font-size="75"
+        letter-spacing="1.5" text-transform="uppercase">GROUND TOUR</text>
+  <text x="60" y="974" fill="#39FF6E" fill-opacity="0.75"
+        font-family="system-ui, sans-serif" font-size="32"
+        letter-spacing="3">VIDEO POSTER · PLACEHOLDER</text>
+</svg>

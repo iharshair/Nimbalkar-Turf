@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1300" width="900" height="1300" role="img" aria-label="GATE">
+  <defs>
+    <linearGradient id="turf" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0B3D24"/>
+      <stop offset="55%" stop-color="#082B1A"/>
+      <stop offset="100%" stop-color="#0A0E14"/>
+    </linearGradient>
+    <radialGradient id="bloom" cx="0.6" cy="0.3" r="0.55">
+      <stop offset="0%" stop-color="#39FF6E" stop-opacity="0.34"/>
+      <stop offset="45%" stop-color="#146B3A" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#0A0E14" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+    <linearGradient id="scrim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="45%" stop-color="#0A0E14" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#0A0E14" stop-opacity="0.92"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="900" height="1300" fill="url(#turf)"/>
+  <!-- Mown stripes -->
+  <rect x="0" y="0" width="100" height="1300" fill="#F4F6F1" fill-opacity="0.014"/><rect x="200" y="0" width="100" height="1300" fill="#F4F6F1" fill-opacity="0.014"/><rect x="400" y="0" width="100" height="1300" fill="#F4F6F1" fill-opacity="0.014"/><rect x="600" y="0" width="100" height="1300" fill="#F4F6F1" fill-opacity="0.014"/><rect x="800" y="0" width="100" height="1300" fill="#F4F6F1" fill-opacity="0.014"/>
+  <rect width="900" height="1300" fill="url(#bloom)"/>
+  
+  <rect width="900" height="1300" filter="url(#grain)" opacity="0.05"/>
+  <rect width="900" height="1300" fill="url(#scrim)"/>
+
+  <text x="54" y="1246" fill="#F4F6F1" fill-opacity="0.9"
+        font-family="Impact, Haettenschweiler, sans-serif" font-size="98"
+        letter-spacing="1.5" text-transform="uppercase">GATE</text>
+  <text x="54" y="1274" fill="#39FF6E" fill-opacity="0.75"
+        font-family="system-ui, sans-serif" font-size="42"
+        letter-spacing="3">STADIUM · PLACEHOLDER</text>
+</svg>

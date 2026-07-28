@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-label="WARM-UP">
+  <defs>
+    <linearGradient id="turf" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0B3D24"/>
+      <stop offset="55%" stop-color="#082B1A"/>
+      <stop offset="100%" stop-color="#0A0E14"/>
+    </linearGradient>
+    <radialGradient id="bloom" cx="0.7" cy="0.2" r="0.55">
+      <stop offset="0%" stop-color="#39FF6E" stop-opacity="0.34"/>
+      <stop offset="45%" stop-color="#146B3A" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#0A0E14" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+    <linearGradient id="scrim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="45%" stop-color="#0A0E14" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#0A0E14" stop-opacity="0.92"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#turf)"/>
+  <!-- Mown stripes -->
+  <rect x="0" y="0" width="177.77777777777777" height="900" fill="#F4F6F1" fill-opacity="0.014"/><rect x="355.55555555555554" y="0" width="177.77777777777777" height="900" fill="#F4F6F1" fill-opacity="0.014"/><rect x="711.1111111111111" y="0" width="177.77777777777777" height="900" fill="#F4F6F1" fill-opacity="0.014"/><rect x="1066.6666666666665" y="0" width="177.77777777777777" height="900" fill="#F4F6F1" fill-opacity="0.014"/><rect x="1422.2222222222222" y="0" width="177.77777777777777" height="900" fill="#F4F6F1" fill-opacity="0.014"/>
+  <rect width="1600" height="900" fill="url(#bloom)"/>
+  
+    <rect x="96" y="90" width="1408" height="720"
+          fill="none" stroke="#F4F6F1" stroke-opacity="0.22" stroke-width="2"/>
+    <line x1="800" y1="90" x2="800" y2="810"
+          stroke="#F4F6F1" stroke-opacity="0.22" stroke-width="2"/>
+    <circle cx="800" cy="450" r="117" fill="none"
+            stroke="#F4F6F1" stroke-opacity="0.22" stroke-width="2"/>
+    <circle cx="800" cy="450" r="3" fill="#F4F6F1" fill-opacity="0.3"/>
+    <rect x="96" y="306" width="144" height="288"
+          fill="none" stroke="#F4F6F1" stroke-opacity="0.18" stroke-width="2"/>
+    <rect x="1360" y="306" width="144" height="288"
+          fill="none" stroke="#F4F6F1" stroke-opacity="0.18" stroke-width="2"/>
+  <rect width="1600" height="900" filter="url(#grain)" opacity="0.05"/>
+  <rect width="1600" height="900" fill="url(#scrim)"/>
+
+  <text x="96" y="846" fill="#F4F6F1" fill-opacity="0.9"
+        font-family="Impact, Haettenschweiler, sans-serif" font-size="68"
+        letter-spacing="1.5" text-transform="uppercase">WARM-UP</text>
+  <text x="96" y="874" fill="#39FF6E" fill-opacity="0.75"
+        font-family="system-ui, sans-serif" font-size="29"
+        letter-spacing="3">FOOTBALL · PLACEHOLDER</text>
+</svg>
