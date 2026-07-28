@@ -1,7 +1,7 @@
-import { FieldValue } from 'firebase-admin/firestore'
+import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { COLLECTIONS, getAdminDb } from '@/lib/firebase/admin'
 import { clubToday } from '@/lib/utils'
-import type { Booking, SlotDayDoc, SlotStatus, StoredSlot } from '@/types'
+import type { Booking, BookingStatus, SlotDayDoc, SlotStatus, Sport, StoredSlot } from '@/types'
 
 /**
  * Data access for the admin panel.
@@ -22,14 +22,109 @@ function db() {
   return getAdminDb()
 }
 
-/** Firestore returns Timestamps; the client only needs something sortable. */
-function serialise(raw: Record<string, unknown>): Booking {
-  const b = raw as Booking & { createdAt?: { toMillis?: () => number } }
-  const createdAt =
-    typeof b.createdAt === 'object' && b.createdAt && typeof b.createdAt.toMillis === 'function'
-      ? b.createdAt.toMillis()
-      : null
-  return { ...(raw as Booking), createdAt }
+/* ── Reading documents ───────────────────────────────────────────────────
+   Firestore hands back untyped data, so these turn `unknown` into the
+   shape the panel needs. Written as narrowing helpers rather than a cast:
+
+   `raw as Booking` doesn't compile, and shouldn't. `Booking` is an
+   interface, so it gets no implicit index signature, which makes it and
+   `Record<string, unknown>` mutually non-assignable — TypeScript is
+   correctly pointing out that asserting between them proves nothing. And a
+   cast would be a lie anyway: a document written by an older version of
+   the app, or half-written by a failed transaction, genuinely might not
+   have these fields.
+
+   Mapping explicitly means a malformed document renders as a booking with
+   sensible blanks instead of crashing the page staff use to handle
+   problems. */
+
+function str(value: unknown, fallback = ''): string {
+  return typeof value === 'string' ? value : fallback
+}
+
+/** Empty strings collapse to null, so `{value ?? 'â€"'}` renders sensibly. */
+function optStr(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 ? value : null
+}
+
+function num(value: unknown, fallback = 0): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
+}
+
+function optNum(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+function strList(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : []
+}
+
+/*
+  Widened to readonly string[] so `.includes()` accepts an arbitrary string.
+  `satisfies` still checks every member is a real BookingStatus, so adding a
+  status to the union without adding it here is a compile error.
+*/
+const BOOKING_STATUSES = [
+  'pending',
+  'confirmed',
+  'failed',
+  'cancelled',
+  'refunded',
+] as const satisfies readonly BookingStatus[]
+
+function isBookingStatus(value: unknown): value is BookingStatus {
+  return typeof value === 'string' && (BOOKING_STATUSES as readonly string[]).includes(value)
+}
+
+const SPORTS = ['football', 'cricket', 'other'] as const satisfies readonly Sport[]
+
+function isSport(value: unknown): value is Sport {
+  return typeof value === 'string' && (SPORTS as readonly string[]).includes(value)
+}
+
+/**
+ * Epoch millis from whatever the field actually holds.
+ *
+ * Firestore writes `Timestamp`, the local dev store writes ISO strings, and
+ * a document read back straight after `serverTimestamp()` can hold null.
+ */
+function readMillis(value: unknown): number | null {
+  if (value instanceof Timestamp) return value.toMillis()
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value)
+    return Number.isNaN(parsed) ? null : parsed
+  }
+  return null
+}
+
+/** `fallbackId` is the document id, used when the stored `id` is missing. */
+function toBooking(raw: Record<string, unknown>, fallbackId: string): Booking {
+  return {
+    id: str(raw.id, fallbackId),
+    date: str(raw.date),
+    slotIds: strList(raw.slotIds),
+    amount: num(raw.amount),
+    status: isBookingStatus(raw.status) ? raw.status : 'pending',
+    name: str(raw.name),
+    phone: str(raw.phone),
+    email: optStr(raw.email),
+    sport: isSport(raw.sport) ? raw.sport : 'other',
+    whatsappOptIn: raw.whatsappOptIn === true,
+    notes: optStr(raw.notes),
+    userId: optStr(raw.userId),
+    razorpayOrderId: optStr(raw.razorpayOrderId),
+    razorpayPaymentId: optStr(raw.razorpayPaymentId),
+    needsAttention: raw.needsAttention === true,
+    conflictSlotIds: strList(raw.conflictSlotIds),
+    securedSlotIds: strList(raw.securedSlotIds),
+    refundId: optStr(raw.refundId),
+    refundedAmount: optNum(raw.refundedAmount),
+    refundedBy: optStr(raw.refundedBy),
+    resolvedBy: optStr(raw.resolvedBy),
+    createdAt: readMillis(raw.createdAt),
+    updatedAt: readMillis(raw.updatedAt),
+  }
 }
 
 /**
@@ -52,7 +147,7 @@ export async function listNeedsAttention(): Promise<Booking[]> {
     .get()
 
   return snap.docs
-    .map((d) => serialise(d.data()))
+    .map((d) => toBooking(d.data(), d.id))
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
 }
 
@@ -68,7 +163,7 @@ export async function listBookingsForDate(date: string): Promise<Booking[]> {
     .get()
 
   return snap.docs
-    .map((d) => serialise(d.data()))
+    .map((d) => toBooking(d.data(), d.id))
     .filter((b) => b.status === 'confirmed' || b.status === 'pending')
     .sort((a, b) => (a.slotIds[0] ?? '').localeCompare(b.slotIds[0] ?? ''))
 }
@@ -92,7 +187,7 @@ export async function listUpcomingBookings(max = 60): Promise<Booking[]> {
     .limit(max)
     .get()
 
-  return snap.docs.map((d) => serialise(d.data()))
+  return snap.docs.map((d) => toBooking(d.data(), d.id))
 }
 
 /** Lookup for "someone is at the gate claiming they booked". */
@@ -111,7 +206,7 @@ export async function findBookingsByPhone(phone: string): Promise<Booking[]> {
     .get()
 
   return snap.docs
-    .map((d) => serialise(d.data()))
+    .map((d) => toBooking(d.data(), d.id))
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
 }
 
@@ -119,7 +214,7 @@ export async function getBookingById(bookingId: string): Promise<Booking | null>
   const database = db()
   if (!database) return null
   const snap = await database.collection(COLLECTIONS.bookings).doc(bookingId).get()
-  return snap.exists ? serialise(snap.data() as Record<string, unknown>) : null
+  return snap.exists ? toBooking(snap.data() ?? {}, snap.id) : null
 }
 
 /**
@@ -196,7 +291,7 @@ export async function markBookingRefunded(params: {
   await database.runTransaction(async (tx) => {
     const bSnap = await tx.get(bookingRef)
     if (!bSnap.exists) throw new Error(`Booking ${bookingId} not found`)
-    const booking = bSnap.data() as Booking
+    const booking = toBooking(bSnap.data() ?? {}, bookingId)
 
     const dayRef = database.collection(COLLECTIONS.slotDays).doc(booking.date)
     const daySnap = await tx.get(dayRef)
