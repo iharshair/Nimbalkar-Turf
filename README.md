@@ -454,6 +454,34 @@ code, but don't mistake the site for feature-complete:
   keys — the Firestore document id is the identity — but widen the alphabet
   before high volume.
 
+## Linting
+
+`next build` runs ESLint and **fails the build on lint errors**, so config
+mistakes surface as deployment failures.
+
+One trap is worth knowing about. `eslint-config-next` depends on
+`@typescript-eslint/parser` — TypeScript gets parsed — but *not* on
+`@typescript-eslint/eslint-plugin`, which is what provides the rule
+definitions. So extending `next/core-web-vitals` alone gives you TS parsing
+with **no `@typescript-eslint/*` rules registered**, and merely naming one:
+
+```ts
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+```
+
+produces `Definition for rule ... was not found` — an *error* — which breaks
+the build. `.eslintrc.js` registers the plugin explicitly so those rules
+resolve.
+
+Version constraint: `eslint-config-next@14` caps `@typescript-eslint/parser`
+at `7.2.0`, so both `@typescript-eslint/*` packages are pinned there. Bumping
+one means bumping both, and checking that cap.
+
+The config deliberately does **not** extend
+`plugin:@typescript-eslint/recommended` — that enables ~30 rules at once
+across existing code. Do it as its own reviewed change, not inside a build
+fix.
+
 ## Deliberately not built
 
 No dark-mode toggle (the site is dark by design), no blog, no language switcher

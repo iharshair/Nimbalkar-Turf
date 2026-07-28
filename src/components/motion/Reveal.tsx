@@ -1,10 +1,35 @@
 'use client'
 
-import { Children, isValidElement, type ElementType, type ReactNode, useRef } from 'react'
+import {
+  Children,
+  isValidElement,
+  type ComponentType,
+  type ElementType,
+  type ReactNode,
+  type Ref,
+  useRef,
+} from 'react'
 import { EASE, gsap } from '@/lib/gsap'
 import { useIsomorphicLayoutEffect } from '@/hooks/useIsomorphicLayoutEffect'
 import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion'
 import { cn } from '@/lib/utils'
+
+/**
+ * The props Reveal actually renders onto its wrapper element.
+ *
+ * Naming them lets the polymorphic `as` be cast to a concrete component
+ * type instead of `any`. TypeScript can't narrow `ElementType`'s union
+ * down to something that provably accepts a ref — but it doesn't need to,
+ * because this describes precisely what gets passed and nothing more.
+ */
+interface RevealElementProps {
+  ref?: Ref<HTMLElement>
+  id?: string
+  className?: string
+  children?: ReactNode
+  'data-reveal'?: string
+  'data-reveal-group'?: string
+}
 
 interface RevealProps {
   children: ReactNode
@@ -98,10 +123,10 @@ export function Reveal({
     return () => ctx.revert()
   }, [group, childKeys, y, x, delay, duration, stagger, start, reducedMotion])
 
-  // Polymorphic `as` + a forwarded ref is more than TS's ElementType
-  // union can narrow, and the cast is contained to this one line.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const Component = Tag as any
+  // Two-step cast because `ElementType` and `ComponentType<P>` don't
+  // overlap enough for a direct assertion. Contained to this one line, and
+  // typed rather than `any`, so the props below are still checked.
+  const Component = Tag as unknown as ComponentType<RevealElementProps>
 
   return (
     <Component
