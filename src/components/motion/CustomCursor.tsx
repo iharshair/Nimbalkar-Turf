@@ -1,6 +1,6 @@
 'use client'
 
-import { type CSSProperties, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { gsap } from '@/lib/gsap'
 import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion'
 import { useIsDesktop } from '@/hooks/useMediaQuery'
@@ -15,7 +15,12 @@ import { cn } from '@/lib/utils'
  *   data-cursor="view|book|play|drag"  → contextual label beside the boot
  *   data-magnetic                      → boot is pulled toward the
  *                                        element's centre within a radius
- *   (any a/button)                     → boot grows and turns chalk
+ *   (any a/button)                     → boot grows and picks up a glow
+
+ * The artwork lives in `public/media/cursor-boot.svg` rather than inline,
+ * so replacing it is a one-file change with no code edit. Keep the toe tip
+ * near (14.5, 31.5) in a 100x100 viewBox, or update TOE_X / TOE_Y below.
+ * It's preloaded in `(site)/layout.tsx` so it never arrives late.
  *
  * Hard-disabled on touch devices and when prefers-reduced-motion is set;
  * in both cases the native cursor is restored (see globals.css, which
@@ -38,45 +43,15 @@ const MAGNET_PADDING = 26
 /** 0 = no pull, 1 = cursor snaps to centre. */
 const MAGNET_STRENGTH = 0.42
 
-/* ── Geometry ────────────────────────────────────────────────────────────
-   The artwork is drawn in a 40x30 box with the toe tip at roughly
-   (1, 20). Those fractions place the toe exactly on the pointer, so the
-   boot points at what you're actually about to click rather than hovering
-   near it. */
-const ART_W = 40
-const ART_H = 30
-const TOE_X = 1 / ART_W
-const TOE_Y = 20 / ART_H
+export const CURSOR_ART = '/media/cursor-boot.svg'
 
-/** Side-profile football boot with four studs. Fills with currentColor. */
-function StudGlyph({ className, style }: { className?: string; style?: CSSProperties }) {
-  return (
-    <svg
-      viewBox={`0 0 ${ART_W} ${ART_H}`}
-      className={className}
-      style={style}
-      fill="currentColor"
-      aria-hidden
-      focusable="false"
-    >
-      {/* Upper and sole as one silhouette — bolder, and reads at ~34px. */}
-      <path d="M2 19.2c0-3 3-4.8 6.8-5.8 3.5-.9 6-2.4 8-5l3-3.7c1-1.3 2.4-2 3.9-2h7.1c2.4 0 4.2 1.9 4.2 4.2v12.3h1.2c1 0 1.8.8 1.8 1.8v1.2c0 1.6-1.3 2.9-2.9 2.9H3.9C2.3 25.1 1 23.8 1 22.2V21c0-1 .8-1.8 1.8-1.8H2z" />
-      {/* Studs. */}
-      <rect x="4.5" y="24.9" width="3" height="3.4" rx="1.3" />
-      <rect x="12" y="24.9" width="3" height="3.4" rx="1.3" />
-      <rect x="21" y="24.9" width="3" height="3.4" rx="1.3" />
-      <rect x="30" y="24.9" width="3" height="3.4" rx="1.3" />
-      {/* Laces, punched through in the page background colour. */}
-      <path
-        d="M16.6 10.1l4.2 2.1M19.1 7.1l4.2 2.1"
-        stroke="#0A0E14"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        fill="none"
-      />
-    </svg>
-  )
-}
+/* ── Geometry ────────────────────────────────────────────────────────────
+   The artwork is a square 100x100 viewBox with the toe tip at roughly
+   (14.5, 31.5). Expressed as fractions so the hotspot survives any size
+   change — it puts the toe exactly on the pointer, so the boot points at
+   what you're about to click rather than hovering near it. */
+const TOE_X = 14.5 / 100
+const TOE_Y = 31.5 / 100
 
 export function CustomCursor() {
   const bootRef = useRef<HTMLDivElement>(null)
@@ -205,11 +180,21 @@ export function CustomCursor() {
 
   if (!mounted || !enabled) return null
 
-  const width = variant === 'labelled' ? 46 : variant === 'interactive' ? 46 : 34
-  const height = width * (ART_H / ART_W)
+  // Square artwork, so one dimension is enough.
+  const size = variant === 'default' ? 40 : 52
 
-  // A planted boot at rest; drawn back further as you press, like a kick.
-  const rotation = pressed ? -24 : variant === 'default' ? -8 : -15
+  /*
+    The old single-colour glyph switched to chalk over interactive
+    elements. This artwork is multi-colour, so state is carried by scale
+    and a glow instead — recolouring a sticker would just muddy it.
+  */
+  const glow =
+    variant === 'default'
+      ? 'drop-shadow(0 3px 6px rgba(0,0,0,0.5))'
+      : 'drop-shadow(0 0 10px rgba(57,255,110,0.55)) drop-shadow(0 3px 6px rgba(0,0,0,0.5))'
+
+  // Pivots near the toe, so a press reads as a kick rather than a spin.
+  const rotation = pressed ? -14 : 0
 
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 z-[200] hidden lg:block">
@@ -223,24 +208,25 @@ export function CustomCursor() {
           className="flex items-center gap-2"
           style={{
             // Put the toe of the boot on the actual pointer position.
-            marginLeft: -width * TOE_X,
-            marginTop: -height * TOE_Y,
+            marginLeft: -size * TOE_X,
+            marginTop: -size * TOE_Y,
             opacity: visible && variant !== 'hidden' ? 1 : 0,
             transition: 'opacity 220ms ease-out',
           }}
         >
-          <StudGlyph
-            className={cn(
-              'shrink-0 drop-shadow-[0_2px_6px_rgba(0,0,0,0.55)]',
-              'transition-[width,height,color,transform] duration-300 ease-turf',
-              variant === 'default' ? 'text-neon' : 'text-chalk',
-            )}
-            // Inline so the size can animate between variants.
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={CURSOR_ART}
+            alt=""
+            aria-hidden
+            draggable={false}
+            className={cn('shrink-0', 'transition-[width,height,transform,filter] duration-300 ease-turf')}
             style={{
-              width,
-              height,
-              transform: `rotate(${rotation}deg) scale(${pressed ? 0.92 : 1})`,
-              transformOrigin: '20% 80%',
+              width: size,
+              height: size,
+              filter: glow,
+              transform: `rotate(${rotation}deg) scale(${pressed ? 0.9 : 1})`,
+              transformOrigin: `${TOE_X * 100}% ${TOE_Y * 100}%`,
             }}
           />
 
