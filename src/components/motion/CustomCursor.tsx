@@ -15,8 +15,11 @@ import { cn } from '@/lib/utils'
  *   data-cursor="view|book|play|drag"  → contextual label beside the boot
  *   data-magnetic                      → boot is pulled toward the
  *                                        element's centre within a radius
- *   (any a/button)                     → boot grows and picks up a glow
-
+ *   (any a/button)                     → boot grows slightly
+ *
+ * The boot is the only thing drawn. There is deliberately no tracking dot,
+ * ring or halo behind it — one pointer on screen, nothing else.
+ *
  * The artwork lives in `public/media/football-boot.png` rather than inline,
  * so replacing it is a one-file change with no code edit. Keep the toe tip
  * near (5, 7.5) of a 100x100 square, or update TOE_X / TOE_Y below.
@@ -88,7 +91,6 @@ const TOE_Y = 7.5 / 100
 
 export function CustomCursor() {
   const bootRef = useRef<HTMLDivElement>(null)
-  const dotRef = useRef<HTMLDivElement>(null)
   const [variant, setVariant] = useState<Variant>('default')
   const [label, setLabel] = useState<string | null>(null)
   const [pressed, setPressed] = useState(false)
@@ -119,15 +121,13 @@ export function CustomCursor() {
   useEffect(() => {
     if (!enabled) return
     const boot = bootRef.current
-    const dot = dotRef.current
-    if (!boot || !dot) return
+    if (!boot) return
 
-    // quickTo gives us a tweened setter — the boot trails, the dot is
-    // near-instant, which reads as weight without feeling laggy.
+    // quickTo gives us a tweened setter, so the boot eases toward the
+    // pointer instead of snapping to it — that slight trail reads as
+    // weight without feeling laggy.
     const bootX = gsap.quickTo(boot, 'x', { duration: 0.42, ease: 'power3.out' })
     const bootY = gsap.quickTo(boot, 'y', { duration: 0.42, ease: 'power3.out' })
-    const dotX = gsap.quickTo(dot, 'x', { duration: 0.1, ease: 'power2.out' })
-    const dotY = gsap.quickTo(dot, 'y', { duration: 0.1, ease: 'power2.out' })
 
     let magnetTarget: HTMLElement | null = null
 
@@ -137,8 +137,10 @@ export function CustomCursor() {
       let x = e.clientX
       let y = e.clientY
 
-      // Magnetic pull: bend the boot toward the element's centre while the
-      // real pointer keeps its true position (the dot stays honest).
+      // Magnetic pull: bend the boot toward the element's centre. This only
+      // engages while the pointer is already inside the magnetic element,
+      // so the displacement can never carry the boot off the thing you're
+      // about to click.
       if (magnetTarget) {
         const r = magnetTarget.getBoundingClientRect()
         const cx = r.left + r.width / 2
@@ -153,8 +155,6 @@ export function CustomCursor() {
 
       bootX(x)
       bootY(y)
-      dotX(e.clientX)
-      dotY(e.clientY)
     }
 
     const resolve = (target: EventTarget | null) => {
@@ -217,14 +217,16 @@ export function CustomCursor() {
   const size = variant === 'default' ? CURSOR_SIZE : CURSOR_SIZE_ACTIVE
 
   /*
-    The old single-colour glyph switched to chalk over interactive
-    elements. This artwork is multi-colour, so state is carried by scale
-    and a glow instead — recolouring a sticker would just muddy it.
+    Hover state is carried by size alone. There was a neon halo here, but
+    a glow around the boot is exactly the second cursor-ish shape this is
+    meant to be free of.
+
+    The one filter kept is a plain offset drop shadow. It isn't a halo and
+    doesn't read as a separate element — it's what stops a white-and-red
+    boot from dissolving into the light sections of the page, the same
+    reason the OS arrow has one.
   */
-  const glow =
-    variant === 'default'
-      ? 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))'
-      : 'drop-shadow(0 0 7px rgba(57,255,110,0.6)) drop-shadow(0 2px 4px rgba(0,0,0,0.5))'
+  const shadow = 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))'
 
   // Pivots near the toe, so a press reads as a kick rather than a spin.
   const rotation = pressed ? -14 : 0
@@ -253,11 +255,11 @@ export function CustomCursor() {
             alt=""
             aria-hidden
             draggable={false}
-            className={cn('shrink-0', 'transition-[width,height,transform,filter] duration-300 ease-turf')}
+            className={cn('shrink-0', 'transition-[width,height,transform] duration-300 ease-turf')}
             style={{
               width: size,
               height: size,
-              filter: glow,
+              filter: shadow,
               transform: `rotate(${rotation}deg) scale(${pressed ? 0.9 : 1})`,
               transformOrigin: `${TOE_X * 100}% ${TOE_Y * 100}%`,
             }}
@@ -270,14 +272,6 @@ export function CustomCursor() {
           ) : null}
         </div>
       </div>
-
-      {/* Dot — always tracks the true pointer position, so the magnetic
-          pull can't cost you precision on the slot grid. */}
-      <div
-        ref={dotRef}
-        className="absolute left-0 top-0 -ml-[2px] -mt-[2px] h-1 w-1 rounded-full bg-neon will-change-transform"
-        style={{ opacity: visible && variant === 'default' ? 1 : 0 }}
-      />
     </div>
   )
 }
