@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { gsap } from '@/lib/gsap'
 import { usePrefersReducedMotion } from '@/hooks/usePrefersReducedMotion'
 import { useIsDesktop } from '@/hooks/useMediaQuery'
 import { cn } from '@/lib/utils'
@@ -45,6 +44,18 @@ const LABELS: Record<string, string> = {
 const MAGNET_PADDING = 26
 /** 0 = no pull, 1 = cursor snaps to centre. */
 const MAGNET_STRENGTH = 0.42
+/*
+  Fraction of the remaining magnetic offset closed each frame.
+
+  This is the only smoothing left in the component, and it is applied to
+  the magnetic *offset* alone — never to the pointer position. The boot
+  tracks the mouse 1:1; only the pull toward an element's centre eases in,
+  because that offset appears the instant you cross an element's edge and
+  snapping it would look like a glitch. At 0.3 it is 94% settled after 8
+  frames (~130ms), which reads as a gentle attraction rather than motion
+  you have to wait for.
+*/
+const MAGNET_EASE = 0.3
 
 /*
   ── SWAPPING IN YOUR OWN ARTWORK ──────────────────────────────────────
@@ -75,7 +86,11 @@ export const CURSOR_ART = '/media/football-boot.png'
   reading as a sticker following the mouse.
 */
 const CURSOR_SIZE = 30
-/** Grows slightly over links and buttons, as an affordance. */
+/**
+ * Grows slightly over links and buttons, as an affordance. Only ever
+ * applied as a scale ratio against CURSOR_SIZE — the rendered box stays
+ * CURSOR_SIZE so hovering never triggers layout.
+ */
 const CURSOR_SIZE_ACTIVE = 38
 
 /* ── Geometry ────────────────────────────────────────────────────────────
@@ -123,38 +138,72 @@ export function CustomCursor() {
     const boot = bootRef.current
     if (!boot) return
 
-    // quickTo gives us a tweened setter, so the boot eases toward the
-    // pointer instead of snapping to it — that slight trail reads as
-    // weight without feeling laggy.
-    const bootX = gsap.quickTo(boot, 'x', { duration: 0.42, ease: 'power3.out' })
-    const bootY = gsap.quickTo(boot, 'y', { duration: 0.42, ease: 'power3.out' })
+    /*
+      Position is written straight to the element from a rAF callback with
+      no tween in between — `translate3d` is set to the raw pointer
+      coordinates, so the boot is exactly where the mouse is on the very
+      next frame.
 
+      Going through rAF rather than writing in the handler doesn't cost
+      latency: a callback queued from inside an input handler still runs
+      before that frame's paint. What it buys is one style write per frame
+      instead of one per event, which matters because high-polling mice
+      fire pointermove far more often than the display refreshes.
+    */
+    const pointer = { x: 0, y: 0 }
+    /** Current and desired magnetic displacement, in px. */
+    const pull = { x: 0, y: 0 }
+    const wanted = { x: 0, y: 0 }
+    let frame: number | null = null
     let magnetTarget: HTMLElement | null = null
+
+    const schedule = () => {
+      if (frame === null) frame = requestAnimationFrame(draw)
+    }
+
+    // A hoisted declaration, so `schedule` above can refer to it.
+    function draw() {
+      frame = null
+
+      const dx = wanted.x - pull.x
+      const dy = wanted.y - pull.y
+      // Snap when the remainder goes sub-pixel. Without this the offset
+      // only ever approaches its target, so the loop would never idle.
+      pull.x = Math.abs(dx) < 0.05 ? wanted.x : pull.x + dx * MAGNET_EASE
+      pull.y = Math.abs(dy) < 0.05 ? wanted.y : pull.y + dy * MAGNET_EASE
+
+      boot.style.transform = `translate3d(${pointer.x + pull.x}px, ${pointer.y + pull.y}px, 0)`
+
+      // Only keep stepping while the pull is still settling. Once the
+      // mouse stops and the offset has landed, no frames are requested.
+      if (pull.x !== wanted.x || pull.y !== wanted.y) schedule()
+    }
 
     const onMove = (e: PointerEvent) => {
       if (!visible) setVisible(true)
 
-      let x = e.clientX
-      let y = e.clientY
+      pointer.x = e.clientX
+      pointer.y = e.clientY
 
       // Magnetic pull: bend the boot toward the element's centre. This only
       // engages while the pointer is already inside the magnetic element,
       // so the displacement can never carry the boot off the thing you're
       // about to click.
+      wanted.x = 0
+      wanted.y = 0
       if (magnetTarget) {
         const r = magnetTarget.getBoundingClientRect()
         const cx = r.left + r.width / 2
         const cy = r.top + r.height / 2
-        const withinX = Math.abs(x - cx) < r.width / 2 + MAGNET_PADDING
-        const withinY = Math.abs(y - cy) < r.height / 2 + MAGNET_PADDING
+        const withinX = Math.abs(e.clientX - cx) < r.width / 2 + MAGNET_PADDING
+        const withinY = Math.abs(e.clientY - cy) < r.height / 2 + MAGNET_PADDING
         if (withinX && withinY) {
-          x += (cx - x) * MAGNET_STRENGTH
-          y += (cy - y) * MAGNET_STRENGTH
+          wanted.x = (cx - e.clientX) * MAGNET_STRENGTH
+          wanted.y = (cy - e.clientY) * MAGNET_STRENGTH
         }
       }
 
-      bootX(x)
-      bootY(y)
+      schedule()
     }
 
     const resolve = (target: EventTarget | null) => {
@@ -205,6 +254,7 @@ export function CustomCursor() {
       window.removeEventListener('pointerup', onUp)
       document.removeEventListener('mouseleave', onLeaveWindow)
       document.removeEventListener('mouseenter', onEnterWindow)
+      if (frame !== null) cancelAnimationFrame(frame)
     }
     // `visible` is intentionally excluded: including it would tear down
     // and rebuild every listener on the first mouse move.
@@ -213,8 +263,18 @@ export function CustomCursor() {
 
   if (!mounted || !enabled) return null
 
-  // Square artwork, so one dimension is enough.
-  const size = variant === 'default' ? CURSOR_SIZE : CURSOR_SIZE_ACTIVE
+  /*
+    Hover growth and the press kick are both transforms, never width or
+    height. Animating the box would run layout on every frame of the
+    transition, on an element that is already moving every frame; a scale
+    is composited instead.
+
+    It fixes the hotspot for free, too: the scale origin is the toe, so the
+    toe stays exactly on the pointer at any size, which lets the offset
+    margins below be constants.
+  */
+  const scale =
+    (variant === 'default' ? 1 : CURSOR_SIZE_ACTIVE / CURSOR_SIZE) * (pressed ? 0.9 : 1)
 
   /*
     Hover state is carried by size alone. There was a neon halo here, but
@@ -234,17 +294,18 @@ export function CustomCursor() {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 z-[200] hidden lg:block">
       {/*
-        Two nested elements on purpose: GSAP owns the outer transform
-        (x/y), React owns the inner one (rotate/scale). Writing both from
-        React would let a re-render clobber the tween mid-flight.
+        Two nested elements on purpose: the rAF loop owns the outer
+        transform (translate), React owns the inner one (rotate/scale).
+        Sharing one element would mean a re-render could overwrite the
+        position mid-movement, or a pointer frame could drop the scale.
       */}
       <div ref={bootRef} className="absolute left-0 top-0 will-change-transform">
         <div
-          className="flex items-center gap-1.5"
+          className="flex items-center gap-2.5"
           style={{
             // Put the toe of the boot on the actual pointer position.
-            marginLeft: -size * TOE_X,
-            marginTop: -size * TOE_Y,
+            marginLeft: -CURSOR_SIZE * TOE_X,
+            marginTop: -CURSOR_SIZE * TOE_Y,
             opacity: visible && variant !== 'hidden' ? 1 : 0,
             transition: 'opacity 220ms ease-out',
           }}
@@ -255,12 +316,12 @@ export function CustomCursor() {
             alt=""
             aria-hidden
             draggable={false}
-            className={cn('shrink-0', 'transition-[width,height,transform] duration-300 ease-turf')}
+            className={cn('shrink-0', 'transition-transform duration-150 ease-out')}
             style={{
-              width: size,
-              height: size,
+              width: CURSOR_SIZE,
+              height: CURSOR_SIZE,
               filter: shadow,
-              transform: `rotate(${rotation}deg) scale(${pressed ? 0.9 : 1})`,
+              transform: `rotate(${rotation}deg) scale(${scale})`,
               transformOrigin: `${TOE_X * 100}% ${TOE_Y * 100}%`,
             }}
           />
