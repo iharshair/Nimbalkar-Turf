@@ -123,7 +123,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       {/* Razorpay Checkout is loaded on demand, but warming the connection
           shaves latency off the first payment. */}
       {/* The cursor artwork is needed the instant the pointer moves. */}
-      <link rel="preload" as="image" href="/media/cursor-boot.svg" />
+      <link rel="preload" as="image" type="image/png" href="/media/football-boot.png" />
       <link rel="preconnect" href="https://checkout.razorpay.com" />
       <link rel="dns-prefetch" href="https://checkout.razorpay.com" />
       <script

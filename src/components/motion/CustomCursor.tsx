@@ -17,9 +17,9 @@ import { cn } from '@/lib/utils'
  *                                        element's centre within a radius
  *   (any a/button)                     → boot grows and picks up a glow
 
- * The artwork lives in `public/media/cursor-boot.svg` rather than inline,
+ * The artwork lives in `public/media/football-boot.png` rather than inline,
  * so replacing it is a one-file change with no code edit. Keep the toe tip
- * near (14.5, 31.5) in a 100x100 viewBox, or update TOE_X / TOE_Y below.
+ * near (5, 7.5) of a 100x100 square, or update TOE_X / TOE_Y below.
  * It's preloaded in `(site)/layout.tsx` so it never arrives late.
  *
  * Hard-disabled on touch devices and when prefers-reduced-motion is set;
@@ -47,21 +47,24 @@ const MAGNET_STRENGTH = 0.42
   ── SWAPPING IN YOUR OWN ARTWORK ──────────────────────────────────────
   Change this one line. Nothing else needs touching.
 
-      '/media/cursor-boot.svg'   vector, scales crisply  (preferred)
-      '/media/cursor-boot.png'   raster, fine at 2x+
+  A square PNG of 128px or more works, as does an SVG. The current file is
+  a 160x160 PNG, which is 4x the largest on-screen size.
 
   Upload via GitHub: repo -> public/media -> Add file -> Upload files.
   Then edit this line in the same web UI if the extension differs.
 
-  Two things to keep in mind:
-    - The toe tip should sit near (14.5, 31.5) of a square canvas, i.e.
-      about 15% across and 31% down. That's the pointer hotspot. If yours
-      differs, change TOE_X / TOE_Y below.
+  Three things to keep in mind:
+    - Use a square canvas. The <img> below is sized square, so a
+      non-square file will be stretched.
+    - The toe tip should sit near (5, 7.5) of that canvas, i.e. about 5%
+      across and 8% down. That's the pointer hotspot. If yours differs,
+      change TOE_X / TOE_Y below.
     - Crop out transparent padding. A boot sitting in a big empty square
       renders tiny at cursor size; if you can't crop it, raise
-      CURSOR_SIZE below to compensate.
+      CURSOR_SIZE below to compensate. Keep the file small — it's
+      preloaded on every page, so a multi-megabyte export is not free.
 */
-export const CURSOR_ART = '/media/cursor-boot.svg'
+export const CURSOR_ART = '/media/football-boot.png'
 
 /*
   Sized to sit alongside a normal OS pointer, which is roughly 24-32 CSS
@@ -73,12 +76,15 @@ const CURSOR_SIZE = 30
 const CURSOR_SIZE_ACTIVE = 38
 
 /* ── Geometry ────────────────────────────────────────────────────────────
-   The artwork is a square 100x100 viewBox with the toe tip at roughly
-   (14.5, 31.5). Expressed as fractions so the hotspot survives any size
-   change — it puts the toe exactly on the pointer, so the boot points at
-   what you're about to click rather than hovering near it. */
-const TOE_X = 14.5 / 100
-const TOE_Y = 31.5 / 100
+   The boot is angled up-left with its toe in the top-left corner, so the
+   hotspot sits near the very start of the canvas. Measured off the actual
+   artwork: the silhouette's up-left extremity is at (2.5, 5.0), and these
+   values sit just inside it, on the toe rather than on its antialiased
+   edge. Expressed as fractions so the hotspot survives any size change —
+   it puts the toe exactly on the pointer, so the boot points at what
+   you're about to click rather than hovering near it. */
+const TOE_X = 5 / 100
+const TOE_Y = 7.5 / 100
 
 export function CustomCursor() {
   const bootRef = useRef<HTMLDivElement>(null)
