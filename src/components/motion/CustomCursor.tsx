@@ -43,7 +43,34 @@ const MAGNET_PADDING = 26
 /** 0 = no pull, 1 = cursor snaps to centre. */
 const MAGNET_STRENGTH = 0.42
 
+/*
+  ── SWAPPING IN YOUR OWN ARTWORK ──────────────────────────────────────
+  Change this one line. Nothing else needs touching.
+
+      '/media/cursor-boot.svg'   vector, scales crisply  (preferred)
+      '/media/cursor-boot.png'   raster, fine at 2x+
+
+  Upload via GitHub: repo -> public/media -> Add file -> Upload files.
+  Then edit this line in the same web UI if the extension differs.
+
+  Two things to keep in mind:
+    - The toe tip should sit near (14.5, 31.5) of a square canvas, i.e.
+      about 15% across and 31% down. That's the pointer hotspot. If yours
+      differs, change TOE_X / TOE_Y below.
+    - Crop out transparent padding. A boot sitting in a big empty square
+      renders tiny at cursor size; if you can't crop it, raise
+      CURSOR_SIZE below to compensate.
+*/
 export const CURSOR_ART = '/media/cursor-boot.svg'
+
+/*
+  Sized to sit alongside a normal OS pointer, which is roughly 24-32 CSS
+  px tall. Much larger and it stops reading as a cursor and starts
+  reading as a sticker following the mouse.
+*/
+const CURSOR_SIZE = 30
+/** Grows slightly over links and buttons, as an affordance. */
+const CURSOR_SIZE_ACTIVE = 38
 
 /* ── Geometry ────────────────────────────────────────────────────────────
    The artwork is a square 100x100 viewBox with the toe tip at roughly
@@ -181,7 +208,7 @@ export function CustomCursor() {
   if (!mounted || !enabled) return null
 
   // Square artwork, so one dimension is enough.
-  const size = variant === 'default' ? 40 : 52
+  const size = variant === 'default' ? CURSOR_SIZE : CURSOR_SIZE_ACTIVE
 
   /*
     The old single-colour glyph switched to chalk over interactive
@@ -190,8 +217,8 @@ export function CustomCursor() {
   */
   const glow =
     variant === 'default'
-      ? 'drop-shadow(0 3px 6px rgba(0,0,0,0.5))'
-      : 'drop-shadow(0 0 10px rgba(57,255,110,0.55)) drop-shadow(0 3px 6px rgba(0,0,0,0.5))'
+      ? 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))'
+      : 'drop-shadow(0 0 7px rgba(57,255,110,0.6)) drop-shadow(0 2px 4px rgba(0,0,0,0.5))'
 
   // Pivots near the toe, so a press reads as a kick rather than a spin.
   const rotation = pressed ? -14 : 0
@@ -205,7 +232,7 @@ export function CustomCursor() {
       */}
       <div ref={bootRef} className="absolute left-0 top-0 will-change-transform">
         <div
-          className="flex items-center gap-2"
+          className="flex items-center gap-1.5"
           style={{
             // Put the toe of the boot on the actual pointer position.
             marginLeft: -size * TOE_X,
